@@ -12,12 +12,20 @@ on:
       dotnet-version:
         type: string
         description: The version of dotnet to use.
-        default: 6.0.x
       install-workload:
         type: string
         description: The name of the workload to install.
         required: false
         default: ''
+      vs-version:
+        type: string
+        description: The version of Visual Studio to use.
+        required: false
+      vs-prerelease:
+        type: boolean
+        description: Whether to use a prerelease version of Visual Studio.
+        required: false
+        default: false
       solution-path:
         type: string
         description: The path to the solution or project to build.
@@ -89,7 +97,7 @@ on:
         required: false
 
 jobs:
-  dotnet-build:
+  msbuild-build:
     runs-on: ${{ inputs.runs-on }}
     name: ${{ inputs.name }}
     env:
@@ -111,6 +119,10 @@ jobs:
         if: ${{ inputs.install-workload }}
         run: dotnet workload install ${{ inputs.install-workload }}
 
+      - name: Download Latest NuGet.exe
+        if: ${{ inputs.runs-on }} == windows-latest
+        run: curl -L -o nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+
       - name: Add NuGet Feed
         if: ${{ inputs.nugetFeedUrl }}
         shell: pwsh
@@ -118,23 +130,29 @@ jobs:
           $userName = "${{ secrets.nugetUserName }}"
           $token = "${{ secrets.nugetToken }}"
           if ($userName -eq '' || $token -eq '') {
-            dotnet nuget add source ${{ inputs.nugetFeedUrl }} -n NuGetFeed
+            nuget sources Add -Source ${{ inputs.nugetFeedUrl }} -Name "CustomFeed"
           } else {
-            dotnet nuget add source ${{ inputs.nugetFeedUrl }} -u $userName -p $token -n NuGetFeed
+            nuget sources Add -Source ${{ inputs.nugetFeedUrl }} -Name "CustomFeed" -Username $userName -Password $token
           }
 
       - name: NuGet Restore
-        run: dotnet restore ${{ inputs.solution-path }}
+        run: nuget restore ${{ inputs.solution-path }}
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          vs-version: ${{ inputs.vs-version }}
+          vs-prerelease: ${{ inputs.vs-prerelease }}
 
       - name: Build Packages
-        run: dotnet build ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} ${{ inputs.build-args }}
+        run: msbuild ${{ inputs.solution-path }} /p:Configuration=${{ inputs.build-configuration }} ${{ inputs.build-args }}
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
         run: dotnet test ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} --no-build
 
       - name: Report Test Results
-        if: ${{ inputs.run-tests }} && ${{ always() }}
+        if: ${{ inputs.run-tests }}
         uses: dorny/test-reporter@main
         with:
           name: ${{ inputs.name }} Tests
