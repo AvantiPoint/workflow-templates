@@ -1,0 +1,178 @@
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: The name of the OS to run the build on.
+        default: windows-latest
+      name:
+        type: string
+        description: The name of the workflow to call.
+        required: true
+      dotnet-version:
+        type: string
+        description: The version of dotnet to use.
+        default: 6.0.x
+      install-workload:
+        type: string
+        description: The name of the workload to install.
+        required: false
+      solution-path:
+        type: string
+        description: The path to the solution or project to build.
+        required: false
+      build-configuration:
+        type: string
+        description: The build configuration to use.
+        default: Release
+        required: false
+      build-args:
+        type: string
+        description: The arguments to pass to the build.
+        required: false
+      run-tests:
+        type: boolean
+        description: Whether to run the tests or not.
+        default: true
+        required: false
+      test-result-path:
+        type: string
+        description: The path to the test results.
+        default: ./TestResults/*.trx
+        required: false
+      code-sign:
+        type: boolean
+        description: Whether to code sign the build or not.
+        default: false
+        required: false
+      artifacts-path:
+        type: string
+        description: The path to the artifacts.
+        default: ./Artifacts/
+        required: false
+      artifact-name:
+        type: string
+        description: The name of the artifact.
+        default: NuGet
+      nugetFeedUrl:
+        type: string
+        description: Url of a Private NuGet feed.
+        required: false
+    secrets:
+      nugetUserName:
+        type: string
+        description: The username to use to access the NuGet feed.
+        required: false
+      nugetToken:
+        type: string
+        description: The token to use to access the NuGet feed.
+        required: false
+      codeSignTimestampUrl:
+        type: string
+        description: The url to the timestamp server.
+        default: https://timestamp.digicert.com
+        required: false
+      codeSignKeyVault:
+        type: string
+        description: The name of the Azure KeyVault to use.
+        required: ${{ inputs.code-sign }}
+      codeSignClientId:
+        type: string
+        description: The client id to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignTenantId:
+        type: string
+        description: The tenant id to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignClientSecret:
+        type: string
+        description: The client secret to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignCertificate:
+        type: string
+        description: The name of the certificate to use to code sign the build.
+        required: ${{ inputs.code-sign }}
+
+
+jobs:
+  deploy:
+    runs-on: ${{ inputs.runs-on }}
+    name: ${{ inputs.name }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET ${{ inputs.dotnet-version }}
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Install .NET Workload
+        if: ${{ inputs.install-workload }} != ''
+        run: dotnet workload install ${{ inputs.install-workload }}
+
+      - name: Add NuGet Feed
+        if: ${{ inputs.nugetFeedUrl }} != ''
+        shell: pwsh
+        run: |
+          $userName = "${{ secrets.nugetUserName }}"
+          $token = "${{ secrets.nugetToken }}"
+          if ($userName -eq '' || $token -eq '') {
+            dotnet nuget add source ${{ inputs.nugetFeedUrl }} -n NuGetFeed
+          } else {
+            dotnet nuget add source ${{ inputs.nugetFeedUrl }} -u $userName -p $token -n NuGetFeed
+          }
+
+      - name: NuGet Restore
+        run: dotnet restore ${{ inputs.solution-path }}
+
+      - name: Build Packages
+        run: dotnet build ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} ${{ inputs.build-args }}
+
+      - name: Run Tests
+        if: ${{ inputs.run-tests }}
+        run: dotnet test ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} --no-build
+
+      - name: Report Test Results
+        if: ${{ inputs.run-tests }}
+        uses: dorny/test-reporter@v1
+        if: ${{ always() }}
+        with:
+          name: ${{ inputs.name }} Tests
+          path: ${{ inputs.test-result-path }}
+          reporter: dotnet-trx
+
+      - name: Sign NuGet Packages
+        if: ${{ inputs.code-sign }}
+        working-directory: ${{ inputs.artifacts-path }}
+        run: |
+          dotnet tool install --global NuGetKeyVaultSignTool
+          NuGetKeyVaultSignTool sign *.nupkg `
+            --file-digest sha256 `
+            --timestamp-rfc3161 '${{ secrets.codeSignTimestampUrl }}' `
+            --timestamp-digest sha256 `
+            --azure-key-vault-url '${{ secrets.codeSignKeyVault }}' `
+            --azure-key-vault-client-id '${{ secrets.codeSignClientId }}' `
+            --azure-key-vault-tenant-id '${{ secrets.codeSignTenantId }}' `
+            --azure-key-vault-client-secret '${{ secrets.codeSignClientSecret }}' `
+            --azure-key-vault-certificate '${{ secrets.codeSignCertificate }}'
+          NuGetKeyVaultSignTool sign *.snupkg `
+            --file-digest sha256 `
+            --timestamp-rfc3161 '${{ secrets.codeSignTimestampUrl }}' `
+            --timestamp-digest sha256 `
+            --azure-key-vault-url '${{ secrets.codeSignKeyVault }}' `
+            --azure-key-vault-client-id '${{ secrets.codeSignClientId }}' `
+            --azure-key-vault-tenant-id '${{ secrets.codeSignTenantId }}' `
+            --azure-key-vault-client-secret '${{ secrets.codeSignClientSecret }}' `
+            --azure-key-vault-certificate '${{ secrets.codeSignCertificate }}'
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifacts-path }}

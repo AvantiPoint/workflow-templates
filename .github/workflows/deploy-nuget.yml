@@ -1,0 +1,92 @@
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: The name of the workflow to call.
+        required: true
+      artifact-name:
+        type: string
+        description: The name of the artifact.
+        default: NuGet
+      code-sign:
+        type: boolean
+        description: Whether to code sign the build or not.
+        default: false
+        required: false
+    secrets:
+      feedUrl:
+        default: https://api.nuget.org/v3/index.json
+        required: false
+      apiKey:
+        required: true
+      codeSignTimestampUrl:
+        type: string
+        description: The url to the timestamp server.
+        default: https://timestamp.digicert.com
+        required: false
+      codeSignKeyVault:
+        type: string
+        description: The name of the Azure KeyVault to use.
+        required: ${{ inputs.code-sign }}
+      codeSignClientId:
+        type: string
+        description: The client id to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignTenantId:
+        type: string
+        description: The tenant id to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignClientSecret:
+        type: string
+        description: The client secret to use to access the KeyVault.
+        required: ${{ inputs.code-sign }}
+      codeSignCertificate:
+        type: string
+        description: The name of the certificate to use to code sign the build.
+        required: ${{ inputs.code-sign }}
+
+jobs:
+  deploy:
+    name: ${{ inputs.name }}
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: Artifacts/
+
+      - name: Sign NuGet Packages
+        if: ${{ inputs.code-sign }}
+        working-directory: Artifacts/
+        run: |
+          dotnet tool install --global NuGetKeyVaultSignTool
+          NuGetKeyVaultSignTool sign *.nupkg `
+            --file-digest sha256 `
+            --timestamp-rfc3161 '${{ secrets.codeSignTimestampUrl }}' `
+            --timestamp-digest sha256 `
+            --azure-key-vault-url '${{ secrets.codeSignKeyVault }}' `
+            --azure-key-vault-client-id '${{ secrets.codeSignClientId }}' `
+            --azure-key-vault-tenant-id '${{ secrets.codeSignTenantId }}' `
+            --azure-key-vault-client-secret '${{ secrets.codeSignClientSecret }}' `
+            --azure-key-vault-certificate '${{ secrets.codeSignCertificate }}'
+          NuGetKeyVaultSignTool sign *.snupkg `
+            --file-digest sha256 `
+            --timestamp-rfc3161 '${{ secrets.codeSignTimestampUrl }}' `
+            --timestamp-digest sha256 `
+            --azure-key-vault-url '${{ secrets.codeSignKeyVault }}' `
+            --azure-key-vault-client-id '${{ secrets.codeSignClientId }}' `
+            --azure-key-vault-tenant-id '${{ secrets.codeSignTenantId }}' `
+            --azure-key-vault-client-secret '${{ secrets.codeSignClientSecret }}' `
+            --azure-key-vault-certificate '${{ secrets.codeSignCertificate }}'
+
+      - name: ${{ inputs.name }}
+        uses: dansiegel/publish-nuget@v1.01
+        with:
+            filename: 'Artifacts/*.nupkg'
+            feedUrl: ${{ secrets.feedUrl }}
+            apiKey: ${{ secrets.apiKey }}
