@@ -60,36 +60,28 @@ on:
         required: false
     secrets:
       nugetUserName:
-        type: string
         description: The username to use to access the NuGet feed.
         required: false
       nugetToken:
-        type: string
         description: The token to use to access the NuGet feed.
         required: false
       codeSignTimestampUrl:
-        type: string
         description: The url to the timestamp server.
         default: https://timestamp.digicert.com
         required: false
       codeSignKeyVault:
-        type: string
         description: The name of the Azure KeyVault to use.
         required: ${{ inputs.code-sign }}
       codeSignClientId:
-        type: string
         description: The client id to use to access the KeyVault.
         required: ${{ inputs.code-sign }}
       codeSignTenantId:
-        type: string
         description: The tenant id to use to access the KeyVault.
         required: ${{ inputs.code-sign }}
       codeSignClientSecret:
-        type: string
         description: The client secret to use to access the KeyVault.
         required: ${{ inputs.code-sign }}
       codeSignCertificate:
-        type: string
         description: The name of the certificate to use to code sign the build.
         required: ${{ inputs.code-sign }}
 
