@@ -2,15 +2,17 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        type: string
-        description: The name of the OS to run the build on.
+        type: choice
+        description: The hosted runner to use.
         default: windows-latest
+        options:
+          - windows-latest
+          - macos-latest
       name:
         type: string
         description: The name of the workflow to call.
         required: true
       dotnet-version:
-        type: string
         description: The version of dotnet to use.
       install-workload:
         type: string
