@@ -152,7 +152,7 @@ jobs:
         run: dotnet test ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} --no-build
 
       - name: Report Test Results
-        if: ${{ inputs.run-tests }}
+        if: ${{ inputs.run-tests }} && ${{ always() }}
         uses: dorny/test-reporter@main
         with:
           name: ${{ inputs.name }} Tests
