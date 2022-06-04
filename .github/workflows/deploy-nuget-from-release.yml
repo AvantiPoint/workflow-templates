@@ -1,0 +1,35 @@
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        description: The tag to use for the release.
+        default: ${{ github.event.release.tag_name }}
+    secrets:
+      feedUrl:
+        default: https://api.nuget.org/v3/index.json
+        required: false
+      apiKey:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+    steps:
+      - uses: robinraju/release-downloader@v1.3
+        with:
+          tag: ${{ inputs.tag }}
+          fileName: "*"
+          out-file-path: "Artifacts/"
+          tarBall: false
+          zipBall: false
+
+      - name: Publish to NuGet.org
+        uses: dansiegel/publish-nuget@v1.01
+        with:
+          filename: 'Artifacts/*.nupkg'
+          feedUrl: ${{ secrets.feedUrl }}
+          apiKey: ${{ secrets.apiKey }}

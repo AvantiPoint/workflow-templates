@@ -1,6 +1,6 @@
 # AvantiPoint Workflow Templates
 
-This repo contains various .NET Workflows to make it easier to create GitHub Actions for your projects.
+This repo contains various .NET Workflows to make it easier to create GitHub Actions for your projects. For more information on how to set up reusable workflows, see [GitHub Actions Docs](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
 ## Examples
 

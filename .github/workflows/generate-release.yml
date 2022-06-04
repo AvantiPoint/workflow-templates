@@ -1,0 +1,61 @@
+on:
+  workflow_call:
+    inputs:
+      package-name:
+        type: string
+        description: The package name to analyze
+        required: true
+      artifact-name:
+        type: string
+        description: The name of the artifact.
+        default: NuGet
+      artifacts:
+        type: string
+        description: The path to the artifacts.
+        default: "Artifacts/*.nupkg,Artifacts/*.snupkg"
+      artifactErrorsFailBuild:
+        type: boolean
+        description: Whether to fail the build if there are errors in the artifact.
+        default: true
+      generateReleaseNotes:
+        type: boolean
+        description: Whether to generate release notes or not.
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    permissions:
+      contents: write
+    outputs:
+      version-name: ${{ steps.process-version.outputs.version-name }}
+      release-display-name: ${{ steps.process-version.outputs.release-display-name }}
+      is-preview: ${{ steps.process-version.outputs.is-preview }}
+
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: Artifacts/
+
+    - name: Process Package Version
+      shell: bash
+      run: |
+        echo "Downloading package version script..."
+        curl -sS -o /tmp/process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/process-version.pl
+        echo "Finished downloading package version script."
+        echo "Processing package version..."
+        perl /tmp/process-version.pl ${{ inputs.package-name }}
+
+    - uses: ncipollo/release-action@main
+      name: Create Release
+      with:
+        artifacts: ${{ inputs.artifacts }}
+        artifactErrorsFailBuild: ${{ inputs.artifactErrorsFailBuild }}
+        draft: true
+        generateReleaseNotes: ${{ inputs.generateReleaseNotes }}
+        name: ${{ steps.process-version.outputs.release-display-name }}
+        prerelease: ${{ steps.process-version.outputs.is-preview }}
+        tag: ${{ steps.process-version.outputs.version-name }}
