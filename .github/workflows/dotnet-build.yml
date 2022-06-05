@@ -10,6 +10,7 @@ on:
         description: The name of the workflow to call.
         required: true
       dotnet-version:
+        type: string
         description: The version of dotnet to use.
         default: 6.0.x
       install-workload:
