@@ -5,10 +5,12 @@ on:
         type: string
         description: The tag to use for the release.
         default: ${{ github.event.release.tag_name }}
-    secrets:
       feedUrl:
+        type: string
+        description: The NuGet feed to use for the release.
         default: https://api.nuget.org/v3/index.json
         required: false
+    secrets:
       apiKey:
         required: true
 
