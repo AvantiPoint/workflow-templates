@@ -31,7 +31,7 @@ jobs:
           zipBall: false
 
       - name: Publish to NuGet.org
-        uses: dansiegel/publish-nuget@v1.01
+        uses: dansiegel/publish-nuget@master
         with:
           filename: 'Artifacts/*.nupkg'
           feedUrl: ${{ secrets.feedUrl }}
