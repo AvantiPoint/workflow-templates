@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: robinraju/release-downloader@v1.3
         with:
+          repository: ${{ github.repository }}
           tag: ${{ inputs.tag }}
           fileName: "*"
           out-file-path: "Artifacts/"
