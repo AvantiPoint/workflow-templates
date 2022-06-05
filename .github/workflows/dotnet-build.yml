@@ -2,6 +2,7 @@ on:
   workflow_call:
     inputs:
       runs-on:
+        type: string
         description: The hosted runner to use.
         default: windows-latest
       name:
