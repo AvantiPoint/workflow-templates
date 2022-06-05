@@ -10,11 +10,13 @@ Build a NuGet package & deploy to a private NuGet feed and NuGet.org
 jobs:
   build:
     uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@master
+    permissions:
+      statuses: write
+      checks: write
     with:
       name: My Project
       install-workload: maui
       solution-path: MyProject.sln
-      run-tests: true
 
   deploy-internal:
     needs: build
@@ -40,6 +42,9 @@ jobs:
       codeSignTenantId: ${{ secrets.CODESIGN_TENANTID }}
       codeSignCertificate: ${{ secrets.CODESIGN_CERTIFICATE }}
 ```
+
+> **NOTE** 
+> If you are running tests be sure to add the permissions so that the Test Results can be viewed. Failure to add the permissions will result in a failure to run the workflow.
 
 ## NuGet Package Signing
 
