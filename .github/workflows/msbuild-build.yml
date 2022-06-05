@@ -160,7 +160,7 @@ jobs:
           reporter: dotnet-trx
 
       - name: Sign NuGet Packages
-        if: ${{ inputs.code-sign }}
+        if: ${{ secrets.codeSignKeyVault }}
         shell: pwsh
         working-directory: ${{ inputs.artifacts-path }}
         run: |

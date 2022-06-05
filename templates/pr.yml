@@ -1,0 +1,22 @@
+name: MyProject PR Validation
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "sample/**"
+      - "src/**"
+      - "test/**"
+      - "version.json"
+      - ".github/workflows/pr.yml"
+
+jobs:
+  build:
+    uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@master
+    permissions:
+      statuses: write
+      checks: write
+    with:
+      name: MyProject
+      solution-path: MyProject.sln
+      install-workload: maui
