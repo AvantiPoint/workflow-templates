@@ -42,6 +42,7 @@ jobs:
 
     - name: Process Package Version
       shell: bash
+      id: process-version
       working-directory: Artifacts/
       run: |
         echo "Downloading package version script..."
