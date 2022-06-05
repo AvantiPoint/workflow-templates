@@ -42,6 +42,7 @@ jobs:
 
     - name: Process Package Version
       shell: bash
+      working-directory: Artifacts/
       run: |
         echo "Downloading package version script..."
         curl -sS -o process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/process-version.pl
