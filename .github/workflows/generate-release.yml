@@ -23,7 +23,7 @@ on:
         default: true
 
 jobs:
-  deploy:
+  create-release:
     runs-on: ubuntu-latest
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -44,10 +44,10 @@ jobs:
       shell: bash
       run: |
         echo "Downloading package version script..."
-        curl -sS -o /tmp/process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/process-version.pl
+        curl -sS -o process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/process-version.pl
         echo "Finished downloading package version script."
         echo "Processing package version..."
-        perl /tmp/process-version.pl ${{ inputs.package-name }}
+        perl process-version.pl ${{ inputs.package-name }}
 
     - uses: ncipollo/release-action@main
       name: Create Release
