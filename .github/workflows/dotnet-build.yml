@@ -2,13 +2,8 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        type: choice
         description: The hosted runner to use.
         default: windows-latest
-        options:
-          - windows-latest
-          - macos-latest
-          - ubuntu-latest
       name:
         type: string
         description: The name of the workflow to call.
