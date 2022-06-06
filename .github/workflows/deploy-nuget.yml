@@ -53,7 +53,7 @@ jobs:
           path: Artifacts/
 
       - name: Sign NuGet Packages
-        if: ${{ secrets.codeSignKeyVault }}
+        if: ${{ inputs.code-sign }}
         shell: pwsh
         working-directory: ${{ inputs.artifacts-path }}
         run: |
