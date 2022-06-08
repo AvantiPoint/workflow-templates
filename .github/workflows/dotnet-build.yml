@@ -91,7 +91,10 @@ on:
 jobs:
   dotnet-build:
     runs-on: ${{ inputs.runs-on }}
-    name: ${{ inputs.name }}
+    name: ${{ inputs.name }}    
+    permissions:
+      statuses: write
+      checks: write
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
