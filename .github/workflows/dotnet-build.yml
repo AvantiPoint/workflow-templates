@@ -148,7 +148,6 @@ jobs:
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
-        continue-on-error: true
         run: dotnet test ${{ inputs.solution-path }} --configuration ${{ inputs.build-configuration }} --logger ${{ inputs.dotnet-test-logger }} --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover --no-build
 
       - name: Upload Coverage
