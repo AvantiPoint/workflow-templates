@@ -162,7 +162,7 @@ jobs:
           }
           Write-Host "NuGet client does not support '.slnf' files. Attempting to restore the projects in the Solution Filter"
           $solutionFilter = (Get-Content ${{ inputs.solution-path }} | ConvertFrom-Json)
-          $solutionFilter | Where-Object { $_.EndsWith('.csproj') } | ForEach-Object {
+          $solutionFilter.solution.projects | Where-Object { $_.EndsWith('.csproj') } | ForEach-Object {
             Write-Host "Restoring project: $_"
             nuget restore $_
           }
