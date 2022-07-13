@@ -160,12 +160,10 @@ jobs:
             nuget restore ${{ inputs.solution-path }}
             return
           }
-          Write-Host "NuGet client does not support '.slnf' files. Attempting to restore the projects in the Solution Filter"
+          Write-Host "NuGet client does not support '.slnf' files."
+          Write-Host "Falling back to restore from sln file."
           $solutionFilter = (Get-Content ${{ inputs.solution-path }} | ConvertFrom-Json)
-          $solutionFilter.solution.projects | Where-Object { $_.EndsWith('.csproj') } | ForEach-Object {
-            Write-Host "Restoring project: $_"
-            nuget restore $_
-          }
+          nuget restore $solutionFilter.solution.path
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
