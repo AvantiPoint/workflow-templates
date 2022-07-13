@@ -153,7 +153,19 @@ jobs:
           }
 
       - name: NuGet Restore
-        run: nuget restore ${{ inputs.solution-path }}
+        shell: pwsh
+        run: |
+          if(!'${{ inputs.solution-path }}'.EndsWith('.slnf'))
+          {
+            nuget restore ${{ inputs.solution-path }}
+            return
+          }
+          Write-Host "NuGet client does not support '.slnf' files. Attempting to restore the projects in the Solution Filter"
+          $solutionFilter = (Get-Contents ${{ inputs.solution-path }} | ConvertFrom-Json)
+          $solutionFilter | Where-Object { $_.EndsWith('.csproj') } | ForEach-Object {
+            Write-Host "Restoring project: $_"
+            nuget restore $_
+          }
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
