@@ -152,18 +152,18 @@ jobs:
             nuget sources Add -Source ${{ inputs.nugetFeedUrl }} -Name "CustomFeed" -Username $userName -Password $token
           }
 
-      - name: NuGet Restore
-        shell: pwsh
-        run: |
-          if(!'${{ inputs.solution-path }}'.EndsWith('.slnf'))
-          {
-            nuget restore ${{ inputs.solution-path }}
-            return
-          }
-          Write-Host "NuGet client does not support '.slnf' files."
-          Write-Host "Falling back to restore from sln file."
-          $solutionFilter = (Get-Content ${{ inputs.solution-path }} | ConvertFrom-Json)
-          nuget restore $solutionFilter.solution.path
+      # - name: NuGet Restore
+      #   shell: pwsh
+      #   run: |
+      #     if(!'${{ inputs.solution-path }}'.EndsWith('.slnf'))
+      #     {
+      #       nuget restore ${{ inputs.solution-path }}
+      #       return
+      #     }
+      #     Write-Host "NuGet client does not support '.slnf' files."
+      #     Write-Host "Falling back to restore from sln file."
+      #     $solutionFilter = (Get-Content ${{ inputs.solution-path }} | ConvertFrom-Json)
+      #     nuget restore $solutionFilter.solution.path
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
@@ -172,7 +172,7 @@ jobs:
           vs-prerelease: ${{ inputs.vs-prerelease }}
 
       - name: Build Packages
-        run: msbuild ${{ inputs.solution-path }} /p:Configuration=${{ inputs.build-configuration }} ${{ inputs.build-args }}
+        run: msbuild ${{ inputs.solution-path }} /r /p:Configuration=${{ inputs.build-configuration }} ${{ inputs.build-args }}
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
