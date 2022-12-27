@@ -135,9 +135,9 @@ jobs:
 
       - name: Run Uno Check
         if: ${{ inputs.uno-check }}
-        run:
+        run: |
           dotnet tool install --global Uno.Check
-           uno-check --ci --fix --non-interactive --verbose
+          uno-check --ci --fix --non-interactive --verbose
 
       - name: Add NuGet Feed
         if: ${{ inputs.nugetFeedUrl }}
