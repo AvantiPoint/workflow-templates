@@ -21,6 +21,11 @@ on:
         description: The name of the workload to install.
         required: false
         default: ''
+      uno-check:
+        type: boolean
+        description: Whether or not to ensure that the host has all of the Uno prerequisites.
+        default: false
+        required: false
       vs-version:
         type: string
         description: The version of Visual Studio to use.
@@ -135,6 +140,12 @@ jobs:
       - name: Install .NET Workload
         if: ${{ inputs.install-workload }}
         run: dotnet workload install ${{ inputs.install-workload }}
+
+      - name: Run Uno Check
+        if: ${{ inputs.uno-check }}
+        run:
+          dotnet tool install --global Uno.Check
+           uno-check --ci --fix --non-interactive --verbose
 
       - name: Download Latest NuGet.exe
         if: ${{ inputs.runs-on }} == windows-latest
