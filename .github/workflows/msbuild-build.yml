@@ -133,7 +133,7 @@ jobs:
 
       - name: Setup .NET ${{ inputs.dotnet-version }}
         if: ${{ inputs.dotnet-version }}
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
