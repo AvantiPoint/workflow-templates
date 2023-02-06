@@ -27,6 +27,16 @@ on:
         description: Whether or not to ensure that the host has all of the Uno prerequisites.
         default: false
         required: false
+      uno-check-manifest:
+        type: string
+        description: An override to the manifest to use.
+        default: ''
+        required: false
+      uno-check-parameters:
+        type: string
+        description: The parameters to pass to the Uno Check command.
+        default: ''
+        required: false
       solution-path:
         type: string
         description: The path to the solution or project to build.
@@ -135,9 +145,14 @@ jobs:
 
       - name: Run Uno Check
         if: ${{ inputs.uno-check }}
+        shell: pwsh
         run: |
           dotnet tool install --global Uno.Check
-          uno-check --ci --fix --non-interactive --verbose
+          if ('${{ inputs.uno-check-manifest }}' -eq '') {
+            uno-check -v --ci --non-interactive --fix --verbose ${{ inputs.uno-check-parameters }}
+          } else {
+            uno-check -v --ci --non-interactive --fix --verbose --manifest ${{ inputs.uno-check-manifest }} ${{ inputs.uno-check-parameters }}
+          }
 
       - name: Add NuGet Feed
         if: ${{ inputs.nugetFeedUrl }}

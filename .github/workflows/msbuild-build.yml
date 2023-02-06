@@ -26,6 +26,16 @@ on:
         description: Whether or not to ensure that the host has all of the Uno prerequisites.
         default: false
         required: false
+      uno-check-manifest:
+        type: string
+        description: An override to the manifest to use.
+        default: ''
+        required: false
+      uno-check-parameters:
+        type: string
+        description: The parameters to pass to the Uno Check command.
+        default: ''
+        required: false
       vs-version:
         type: string
         description: The version of Visual Studio to use.
@@ -143,9 +153,14 @@ jobs:
 
       - name: Run Uno Check
         if: ${{ inputs.uno-check }}
+        shell: pwsh
         run: |
           dotnet tool install --global Uno.Check
-          uno-check --ci --fix --non-interactive --verbose
+          if ('${{ inputs.uno-check-manifest }}' -eq '') {
+            uno-check -v --ci --non-interactive --fix --verbose ${{ inputs.uno-check-parameters }}
+          } else {
+            uno-check -v --ci --non-interactive --fix --verbose --manifest ${{ inputs.uno-check-manifest }} ${{ inputs.uno-check-parameters }}
+          }
 
       - name: Download Latest NuGet.exe
         if: ${{ inputs.runs-on }} == windows-latest
@@ -162,19 +177,6 @@ jobs:
           } else {
             nuget sources Add -Source ${{ inputs.nugetFeedUrl }} -Name "CustomFeed" -Username $userName -Password $token
           }
-
-      # - name: NuGet Restore
-      #   shell: pwsh
-      #   run: |
-      #     if(!'${{ inputs.solution-path }}'.EndsWith('.slnf'))
-      #     {
-      #       nuget restore ${{ inputs.solution-path }}
-      #       return
-      #     }
-      #     Write-Host "NuGet client does not support '.slnf' files."
-      #     Write-Host "Falling back to restore from sln file."
-      #     $solutionFilter = (Get-Content ${{ inputs.solution-path }} | ConvertFrom-Json)
-      #     nuget restore $solutionFilter.solution.path
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
