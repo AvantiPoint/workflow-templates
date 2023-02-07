@@ -26,10 +26,15 @@ on:
         description: Whether or not to ensure that the host has all of the Uno prerequisites.
         default: false
         required: false
+      uno-check-version:
+        type: string
+        description: The version of Uno Check to use.
+        default: 1.11.0
+        required: false
       uno-check-manifest:
         type: string
         description: An override to the manifest to use.
-        default: ''
+        default: 'https://raw.githubusercontent.com/unoplatform/uno.check/1.11.0/manifests/uno.ui.manifest.json'
         required: false
       uno-check-parameters:
         type: string
@@ -155,7 +160,7 @@ jobs:
         if: ${{ inputs.uno-check }}
         shell: pwsh
         run: |
-          dotnet tool install --global Uno.Check
+          dotnet tool install --global Uno.Check --version ${{ inputs.uno-check-version }}
           if ('${{ inputs.uno-check-manifest }}' -eq '') {
             uno-check -v --ci --non-interactive --fix --verbose ${{ inputs.uno-check-parameters }}
           } else {
