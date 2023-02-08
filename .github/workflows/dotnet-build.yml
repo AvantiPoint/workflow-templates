@@ -197,7 +197,7 @@ jobs:
           if ($timestampUrl -eq '') {
             $timestampUrl = 'http://timestamp.digicert.com'
           }
-          ls | Where-Object { $_.Name.EndsWith('.nupkg') -or $_.Name.EndsWith('.snupkg') } | ForEach-Object {
+          Get-ChildItem -Recurse | Where-Object { $_.Name.EndsWith('.nupkg') -or $_.Name.EndsWith('.snupkg') } | ForEach-Object {
             NuGetKeyVaultSignTool sign $_.Name `
               --file-digest sha256 `
               --timestamp-rfc3161 $timestampUrl `
@@ -211,6 +211,7 @@ jobs:
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
+        if: ${{ inputs.artifact-name }}
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.artifacts-path }}
