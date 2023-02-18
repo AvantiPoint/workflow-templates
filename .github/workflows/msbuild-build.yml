@@ -164,7 +164,7 @@ jobs:
           Write-Host "Downloading Windows SDK installer..."
           Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/Install-WindowsSdkISO.ps1 -OutFile Install-WindowsSdkISO.ps1
           Write-Host "Finished downloading Windows SDK installer."
-          "${ inputs.windows-sdk-version }".Split(",") | ForEach-Object {
+          "${{ inputs.windows-sdk-version }}".Split(",") | ForEach-Object {
             Write-Host "Installing Windows SDK $($_)"
             .\Install-WindowsSdkISO.ps1 $_
             Write-Host "Finished installing Windows SDK $($_)"
