@@ -42,6 +42,11 @@ on:
         description: The parameters to pass to the Uno Check command.
         default: ''
         required: false
+      windows-sdk-version:
+        type: string
+        description: The version of the Windows SDK to use.
+        required: false
+        default: ''
       solution-path:
         type: string
         description: The path to the solution or project to build.
@@ -143,6 +148,19 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Setup Windows SDK ${{ inputs.windows-sdk-version }}
+        if: ${{ inputs.windows-sdk-version }}
+        shell: pwsh
+        run: |
+          Write-Host "Downloading Windows SDK installer..."
+          Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/Install-WindowsSdkISO.ps1 -OutFile Install-WindowsSdkISO.ps1
+          Write-Host "Finished downloading Windows SDK installer."
+          "${ inputs.windows-sdk-version }".Split(",") | ForEach-Object {
+            Write-Host "Installing Windows SDK $($_)"
+            .\Install-WindowsSdkISO.ps1 $_
+            Write-Host "Finished installing Windows SDK $($_)"
+          }
 
       - name: Install .NET Workload
         if: ${{ inputs.install-workload }}
