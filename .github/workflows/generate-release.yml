@@ -21,6 +21,10 @@ on:
         type: boolean
         description: Whether to generate release notes or not.
         default: true
+      zipPath:
+        type: string
+        description: The path to the files to zip.
+        default: ''
 
 jobs:
   create-release:
@@ -42,6 +46,14 @@ jobs:
       with:
         name: ${{ inputs.artifact-name }}
         path: Artifacts/
+
+    - name: Zip files
+      if: ${{ inputs.zipPath != '' }}
+      run: |
+        IFS=';' read -ra PATHS <<< "${{ inputs.zipPath }}"
+        for path in "${PATHS[@]}"; do
+          zip -r "${path//\//}.zip" "$path"
+        done
 
     - name: Process Package Version
       shell: bash
