@@ -16,6 +16,7 @@ on:
       dotnet-version:
         type: string
         description: The version of dotnet to use.
+        default: 7.0.x
       install-workload:
         type: string
         description: The name of the workload to install.
@@ -146,7 +147,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: ${{ inputs.submodules }}
