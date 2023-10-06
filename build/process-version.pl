@@ -29,23 +29,30 @@ if (not defined $gitTag or not defined $version) {
 # Open GitHub output file for appending
 open my $fh, '>>', $ENV{'GITHUB_OUTPUT'} or die "Could not open GitHub output file: $!";
 
+# Helper to write and print output
+sub write_and_print {
+    my ($key, $value) = @_;
+    print $fh "$key=$value\n";
+    print "$key=$value\n";
+}
+
 # Set is-preview and release-display-name
 if ($preview eq "") {
-    print $fh "is-preview=false\n";
-    print $fh "release-display-name=$version\n";
+    write_and_print("is-preview", "false");
+    write_and_print("release-display-name", $version);
 } elsif ($preview =~ m/alpha/) {
-    print $fh "is-preview=true\n";
-    print $fh "release-display-name=$version - Alpha\n";
+    write_and_print("is-preview", "true");
+    write_and_print("release-display-name", "$version - Alpha");
 } elsif ($preview =~ m/beta/) {
-    print $fh "is-preview=true\n";
-    print $fh "release-display-name=$version - Beta\n";
+    write_and_print("is-preview", "true");
+    write_and_print("release-display-name", "$version - Beta");
 } else {
-    print $fh "is-preview=true\n";
-    print $fh "release-display-name=$version - Preview\n";
+    write_and_print("is-preview", "true");
+    write_and_print("release-display-name", "$version - Preview");
 }
 
 # Set version-name
-print $fh "version-name=$gitTag\n";
+write_and_print("version-name", $gitTag);
 
 # Close the file handle
 close $fh;
