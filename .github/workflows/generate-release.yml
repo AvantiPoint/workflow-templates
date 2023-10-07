@@ -52,7 +52,9 @@ jobs:
       run: |
         IFS=';' read -ra PATHS <<< "${{ inputs.zipPath }}"
         for path in "${PATHS[@]}"; do
-          zip -r "${path//\//}.zip" "$path"
+          cd "$(dirname "$path")"
+          zip -r "$(basename "$path").zip" "$(basename "$path")"
+          cd -
         done
 
     - name: Process Package Version
