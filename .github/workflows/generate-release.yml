@@ -52,10 +52,14 @@ jobs:
       run: |
         IFS=';' read -ra PATHS <<< "${{ inputs.zipPath }}"
         for path in "${PATHS[@]}"; do
+          path=$(echo "$path" | sed 's/^\.\///')
+          path=$(echo "$path" | sed 's/\/$//')
+          path=$(echo "$path" | sed 's/\//\\/g')
           if [ ! -e "$path" ]; then
             echo "Path $path does not exist"
             continue
           fi
+          echo "Zipping path $path"
           cd "$(dirname "$path")"
           zip -r "$(basename "$path").zip" "$(basename "$path")"
           cd -
