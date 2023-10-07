@@ -57,6 +57,17 @@ jobs:
           path=$(echo "$path" | sed 's/\//\\/g')
           if [ ! -e "$path" ]; then
             echo "Path $path does not exist"
+            echo "Contents of $(pwd):"
+            ls -la
+            IFS='/' read -ra PARTS <<< "$path"
+            for i in "${!PARTS[@]}"; do
+              DIR="${PARTS[@]:0:$i+1}"
+              DIR=$(echo "$DIR" | sed 's/\\/\\//g')
+              if [ -e "$DIR" ]; then
+                echo "Contents of $DIR:"
+                ls -la "$DIR"
+              fi
+            done
             continue
           fi
           echo "Zipping path $path"
