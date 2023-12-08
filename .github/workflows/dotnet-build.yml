@@ -30,12 +30,12 @@ on:
       uno-check-version:
         type: string
         description: The version of Uno Check to use.
-        default: 1.11.0
+        default: 1.17.0
         required: false
       uno-check-manifest:
         type: string
         description: An override to the manifest to use.
-        default: 'https://raw.githubusercontent.com/unoplatform/uno.check/1.11.0/manifests/uno.ui.manifest.json'
+        default: 'https://raw.githubusercontent.com/unoplatform/uno.check/1.17.0/manifests/uno.ui.manifest.json'
         required: false
       uno-check-parameters:
         type: string
