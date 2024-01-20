@@ -22,9 +22,9 @@ on:
         description: The name of the workload to install.
         required: false
         default: ''
-      android-version:
+      jdk-version:
         type: string
-        description: The version of the Android SDK to use.
+        description: The version of the OpenJdk SDK to use.
         required: false
         default: ''
       uno-check:
@@ -176,14 +176,12 @@ jobs:
             Write-Host "Finished installing Windows SDK $($_)"
           }
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        if: ${{ inputs.android-version }}
-
-      - name: Setup Android SDK ${{ inputs.android-version }}
-        if: ${{ inputs.android-version }}
-        run: |
-          echo "y" | & sdkmanager "platforms;android-${{ inputs.android-version }}"
+      - name: Set up OpenJDK ${{ inputs.jdk-version }}
+        if: ${{ inputs.jdk-version }}
+        uses: AdoptOpenJDK/install-jdk@v1
+        with:
+          version: ${{ inputs.jdk-version }}
+          architecture: x64
 
       - name: Install .NET Workload
         if: ${{ inputs.install-workload }}
