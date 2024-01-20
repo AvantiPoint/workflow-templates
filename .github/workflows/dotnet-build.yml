@@ -167,11 +167,14 @@ jobs:
             Write-Host "Finished installing Windows SDK $($_)"
           }
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        if: ${{ inputs.android-version }}
+
       - name: Setup Android SDK ${{ inputs.android-version }}
         if: ${{ inputs.android-version }}
-        shell: pwsh
         run: |
-          echo "y" | & "$Env:ANDROID_HOME\tools\bin\sdkmanager" "platforms;android-${{ inputs.android-version }}"
+          echo "y" | & sdkmanager "platforms;android-${{ inputs.android-version }}"
 
       - name: Install .NET Workload
         if: ${{ inputs.install-workload }}
