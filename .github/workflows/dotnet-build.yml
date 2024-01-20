@@ -22,6 +22,11 @@ on:
         description: The name of the workload to install.
         required: false
         default: ''
+      android-version:
+        type: string
+        description: The version of the Android SDK to use.
+        required: false
+        default: ''
       uno-check:
         type: boolean
         description: Whether or not to ensure that the host has all of the Uno prerequisites.
@@ -161,6 +166,12 @@ jobs:
             .\Install-WindowsSdkISO.ps1 $_
             Write-Host "Finished installing Windows SDK $($_)"
           }
+
+      - name: Setup Android SDK ${{ inputs.android-version }}
+        if: ${{ inputs.android-version }}
+        shell: pwsh
+        run: |
+          echo "y" | & "$Env:ANDROID_HOME\tools\bin\sdkmanager" "platforms;android-${{ inputs.android-version }}"
 
       - name: Install .NET Workload
         if: ${{ inputs.install-workload }}
