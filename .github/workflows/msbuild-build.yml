@@ -149,8 +149,6 @@ jobs:
       # Secrets can't be referenced in conditionals, but environment variables can.
       # https://github.com/github/docs/issues/6861#issuecomment-870757186
       CODECOV_TOKEN: ${{ secrets.codecovToken }}
-      DOTNET_INSTALL_DIR: ${{ github.workspace }}\.dotnet
-      DOTNET_ROOT: ${{ github.workspace }}\.dotnet
 
     steps:
       - name: Checkout
@@ -160,9 +158,13 @@ jobs:
           submodules: ${{ inputs.submodules }}
 
       - name: Setup .NET ${{ inputs.dotnet-version }}
+        if: ${{ inputs.dotnet-version }}
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
+        env:
+          DOTNET_INSTALL_DIR: ${{ github.workspace }}\.dotnet
+          DOTNET_ROOT: ${{ github.workspace }}\.dotnet
 
       - name: Setup Windows SDK ${{ inputs.windows-sdk-version }}
         if: ${{ inputs.windows-sdk-version }}
