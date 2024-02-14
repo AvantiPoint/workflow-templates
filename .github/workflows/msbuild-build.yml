@@ -35,7 +35,7 @@ on:
       uno-check-version:
         type: string
         description: The version of Uno Check to use.
-        default: 1.19.0
+        default: 1.20.0-dev.7
         required: false
       uno-check-manifest:
         type: string
@@ -149,8 +149,6 @@ jobs:
       # Secrets can't be referenced in conditionals, but environment variables can.
       # https://github.com/github/docs/issues/6861#issuecomment-870757186
       CODECOV_TOKEN: ${{ secrets.codecovToken }}
-      DOTNET_INSTALL_DIR: ${{ github.workspace }}\.dotnet
-      DOTNET_ROOT: ${{ github.workspace }}\.dotnet
 
     steps:
       - name: Checkout
@@ -160,6 +158,7 @@ jobs:
           submodules: ${{ inputs.submodules }}
 
       - name: Setup .NET ${{ inputs.dotnet-version }}
+        if: ${{ inputs.dotnet-version }}
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
