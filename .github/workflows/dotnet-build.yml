@@ -35,7 +35,7 @@ on:
       uno-check-version:
         type: string
         description: The version of Uno Check to use.
-        default: 1.19.0
+        default: 1.20.0-dev.7
         required: false
       uno-check-manifest:
         type: string
@@ -153,9 +153,6 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-        env:
-          DOTNET_INSTALL_DIR: ${{ github.workspace }}\.dotnet
-          DOTNET_ROOT: ${{ github.workspace }}\.dotnet
 
       - name: Setup Windows SDK ${{ inputs.windows-sdk-version }}
         if: ${{ inputs.windows-sdk-version }}
