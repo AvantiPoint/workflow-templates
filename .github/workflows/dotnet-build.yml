@@ -35,7 +35,7 @@ on:
       uno-check-version:
         type: string
         description: The version of Uno Check to use.
-        default: 1.20.0-dev.7
+        default: 1.20.2
         required: false
       uno-check-manifest:
         type: string
