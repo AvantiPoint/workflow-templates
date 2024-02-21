@@ -16,7 +16,7 @@ on:
       dotnet-version:
         type: string
         description: The version of dotnet to use.
-        default: 8.0.x
+        default: 8.0.201
       install-workload:
         type: string
         description: The name of the workload to install.
@@ -35,7 +35,7 @@ on:
       uno-check-version:
         type: string
         description: The version of Uno Check to use.
-        default: 1.20.0-dev.7
+        default: 1.20.2
         required: false
       uno-check-manifest:
         type: string
