@@ -10,6 +10,10 @@ on:
         description: The NuGet feed to use for the release.
         default: https://api.nuget.org/v3/index.json
         required: false
+      environmentName:
+        type: string
+        description: The name of the environment.
+        required: false
     secrets:
       apiKey:
         required: true
@@ -17,6 +21,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environmentName }}
     env:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true

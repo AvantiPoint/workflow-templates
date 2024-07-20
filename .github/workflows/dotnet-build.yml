@@ -9,6 +9,10 @@ on:
         type: string
         description: The name of the workflow to call.
         required: true
+      environmentName:
+        type: string
+        description: The name of the environment.
+        required: false
       submodules:
         type: boolean
         description: Whether or not to checkout submodules.
@@ -132,6 +136,7 @@ jobs:
   dotnet-build:
     runs-on: ${{ inputs.runs-on }}
     name: ${{ inputs.name }}
+    environment: ${{ inputs.environmentName }}
     env:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true

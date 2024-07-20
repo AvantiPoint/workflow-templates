@@ -14,6 +14,10 @@ on:
         description: Whether to code sign the build or not.
         default: false
         required: false
+      environmentName:
+        type: string
+        description: The name of the environment.
+        required: false
     secrets:
       feedUrl:
         required: false
@@ -42,6 +46,7 @@ jobs:
   deploy:
     name: ${{ inputs.name }}
     runs-on: windows-latest
+    environment: ${{ inputs.environmentName }}
     env:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
