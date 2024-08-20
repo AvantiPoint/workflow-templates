@@ -215,13 +215,15 @@ jobs:
           }
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v2
         with:
           vs-version: ${{ inputs.vs-version }}
           vs-prerelease: ${{ inputs.vs-prerelease }}
 
       - name: Build Packages
-        run: msbuild ${{ inputs.solution-path }} /r /p:Configuration=${{ inputs.build-configuration }} ${{ inputs.build-args }}
+        run: |
+          msbuild ${{ inputs.solution-path }} /r /p:Configuration=${{ inputs.build-configuration }} ${{ inputs.build-args }}
+        shell: pwsh
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
