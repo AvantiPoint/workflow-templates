@@ -42,7 +42,7 @@ jobs:
       is-preview: ${{ steps.process-version.outputs.is-preview }}
 
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
         path: Artifacts/

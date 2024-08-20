@@ -159,7 +159,7 @@ jobs:
 
       - name: Setup .NET ${{ inputs.dotnet-version }}
         if: ${{ inputs.dotnet-version }}
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
@@ -256,7 +256,7 @@ jobs:
           }
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ inputs.artifact-name }}
         with:
           name: ${{ inputs.artifact-name }}
