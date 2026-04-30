@@ -1,0 +1,4 @@
+root = true
+
+[*.{yml,yaml}]
+end_of_line = lf
