@@ -152,14 +152,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: ${{ inputs.submodules }}
 
       - name: Setup .NET ${{ inputs.dotnet-version }}
         if: ${{ inputs.dotnet-version }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
@@ -178,7 +178,7 @@ jobs:
 
       - name: Set up OpenJDK ${{ inputs.jdk-version }}
         if: ${{ inputs.jdk-version }}
-        uses: AdoptOpenJDK/install-jdk@v1
+        uses: AdoptOpenJDK/install-jdk@v1.1.1
         with:
           version: ${{ inputs.jdk-version }}
           architecture: x64
@@ -215,7 +215,7 @@ jobs:
           }
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v3
         with:
           vs-version: ${{ inputs.vs-version }}
           vs-prerelease: ${{ inputs.vs-prerelease }}
@@ -229,7 +229,7 @@ jobs:
 
       - name: Upload Coverage
         if: ${{ env.CODECOV_TOKEN }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.codecovToken }}
 
@@ -256,7 +256,7 @@ jobs:
           }
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ inputs.artifact-name }}
         with:
           name: ${{ inputs.artifact-name }}
