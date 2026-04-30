@@ -159,7 +159,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Downloading Windows SDK installer..."
-          Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/Install-WindowsSdkISO.ps1 -OutFile Install-WindowsSdkISO.ps1
+          Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/avantipoint/workflow-templates/v1/build/Install-WindowsSdkISO.ps1 -OutFile Install-WindowsSdkISO.ps1
           Write-Host "Finished downloading Windows SDK installer."
           "${{ inputs.windows-sdk-version }}".Split(",") | ForEach-Object {
             Write-Host "Installing Windows SDK $($_)"

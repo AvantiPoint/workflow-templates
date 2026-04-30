@@ -82,7 +82,7 @@ jobs:
       working-directory: Artifacts/
       run: |
         echo "Downloading package version script..."
-        curl -sS -o process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/master/build/process-version.pl
+        curl -sS -o process-version.pl https://raw.githubusercontent.com/avantipoint/workflow-templates/v1/build/process-version.pl
         echo "Finished downloading package version script."
         echo "Processing package version..."
         perl process-version.pl ${{ inputs.package-name }}
