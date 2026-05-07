@@ -212,25 +212,36 @@ jobs:
       - name: Build Packages
         run: dotnet build ${{ inputs.solution-path }} -c ${{ inputs.build-configuration }} ${{ inputs.build-args }}
 
-      - name: Run Tests (Scoped Projects)
-        if: ${{ inputs.run-tests && inputs.test-projects != '' }}
+      - name: Run Tests
+        if: ${{ inputs.run-tests }}
         shell: pwsh
         run: |
-          $projects = "${{ inputs.test-projects }}" -split '[;\r\n]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-          if ($projects.Count -eq 0) {
+          $raw = "${{ inputs.test-projects }}"
+          $projects = $raw -split '[;\r\n]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          if ($raw.Trim() -ne '' -and $projects.Count -eq 0) {
             throw "Input 'test-projects' was provided but no valid project paths were found."
           }
-          foreach ($project in $projects) {
-            Write-Host "Running tests for $project"
-            dotnet test $project --configuration ${{ inputs.build-configuration }} --logger ${{ inputs.dotnet-test-logger }} --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover --no-build
-            if ($LASTEXITCODE -ne 0) {
-              throw "Tests failed for $project"
+          $commonArgs = @(
+            '--configuration', '${{ inputs.build-configuration }}',
+            '--logger', '${{ inputs.dotnet-test-logger }}',
+            '--blame-crash',
+            '--collect:XPlat Code Coverage',
+            '--',
+            'DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover',
+            '--no-build'
+          )
+          if ($projects.Count -gt 0) {
+            foreach ($project in $projects) {
+              Write-Host "Running tests for $project"
+              dotnet test $project @commonArgs
+              if ($LASTEXITCODE -ne 0) { throw "Tests failed for $project" }
             }
+          } else {
+            $target = '${{ inputs.solution-path }}'
+            Write-Host "Running tests for $target"
+            dotnet test $target @commonArgs
+            if ($LASTEXITCODE -ne 0) { throw "Tests failed for $target" }
           }
-
-      - name: Run Tests (Solution/Project Path)
-        if: ${{ inputs.run-tests && inputs.test-projects == '' }}
-        run: dotnet test ${{ inputs.solution-path }} --configuration ${{ inputs.build-configuration }} --logger ${{ inputs.dotnet-test-logger }} --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover --no-build
 
       - name: Upload Coverage
         if: ${{ env.CODECOV_TOKEN }}

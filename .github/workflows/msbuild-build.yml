@@ -85,6 +85,11 @@ on:
         type: string
         required: false
         default: GitHubActions
+      test-projects:
+        type: string
+        description: Optional semicolon or newline-separated list of test project paths. If set, tests run only for these projects.
+        required: false
+        default: ''
       test-result-path:
         type: string
         description: The path to the test results.
@@ -227,7 +232,34 @@ jobs:
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
-        run: dotnet test ${{ inputs.solution-path }} --configuration ${{ inputs.build-configuration }} --logger ${{ inputs.dotnet-test-logger }} --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover --no-build
+        shell: pwsh
+        run: |
+          $raw = "${{ inputs.test-projects }}"
+          $projects = $raw -split '[;\r\n]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          if ($raw.Trim() -ne '' -and $projects.Count -eq 0) {
+            throw "Input 'test-projects' was provided but no valid project paths were found."
+          }
+          $commonArgs = @(
+            '--configuration', '${{ inputs.build-configuration }}',
+            '--logger', '${{ inputs.dotnet-test-logger }}',
+            '--blame-crash',
+            '--collect:XPlat Code Coverage',
+            '--',
+            'DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover',
+            '--no-build'
+          )
+          if ($projects.Count -gt 0) {
+            foreach ($project in $projects) {
+              Write-Host "Running tests for $project"
+              dotnet test $project @commonArgs
+              if ($LASTEXITCODE -ne 0) { throw "Tests failed for $project" }
+            }
+          } else {
+            $target = '${{ inputs.solution-path }}'
+            Write-Host "Running tests for $target"
+            dotnet test $target @commonArgs
+            if ($LASTEXITCODE -ne 0) { throw "Tests failed for $target" }
+          }
 
       - name: Upload Coverage
         if: ${{ env.CODECOV_TOKEN }}
