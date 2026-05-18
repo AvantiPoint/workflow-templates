@@ -81,6 +81,21 @@ on:
         description: Optional semicolon or newline-separated list of test project paths. If set, tests run only for these projects.
         required: false
         default: ''
+      use-microsoft-testing-platform:
+        type: boolean
+        description: >
+          Run tests using Microsoft.Testing.Platform dotnet test mode (.NET 10+).
+          Consumer must set global.json test.runner to Microsoft.Testing.Platform
+          and use MTP-compatible test projects (e.g. xunit.v3.mtp-v2).
+        default: false
+        required: false
+      dotnet-test-report-github:
+        type: boolean
+        description: >
+          When use-microsoft-testing-platform is true, pass --report-github to dotnet test.
+          Ignored in VSTest mode (use dotnet-test-logger instead).
+        default: true
+        required: false
       test-result-path:
         type: string
         description: The path to the test results.
@@ -221,26 +236,46 @@ jobs:
           if ($raw.Trim() -ne '' -and $projects.Count -eq 0) {
             throw "Input 'test-projects' was provided but no valid project paths were found."
           }
-          $commonArgs = @(
-            '--configuration', '${{ inputs.build-configuration }}',
-            '--logger', '${{ inputs.dotnet-test-logger }}',
-            '--blame-crash',
-            '--collect:XPlat Code Coverage',
-            '--',
-            'DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover',
-            '--no-build'
-          )
-          if ($projects.Count -gt 0) {
-            foreach ($project in $projects) {
-              Write-Host "Running tests for $project"
-              dotnet test $project @commonArgs
-              if ($LASTEXITCODE -ne 0) { throw "Tests failed for $project" }
+
+          if ('${{ inputs.use-microsoft-testing-platform }}' -eq 'true') {
+            $mtpArgs = @('--configuration', '${{ inputs.build-configuration }}')
+            if ('${{ inputs.dotnet-test-report-github }}' -eq 'true') {
+              $mtpArgs += '--report-github'
+            }
+            if ($projects.Count -gt 0) {
+              foreach ($project in $projects) {
+                Write-Host "Running tests (MTP) for $project"
+                dotnet test --project $project @mtpArgs
+                if ($LASTEXITCODE -ne 0) { throw "Tests failed for $project" }
+              }
+            } else {
+              $target = '${{ inputs.solution-path }}'
+              Write-Host "Running tests (MTP) for solution $target"
+              dotnet test --solution $target @mtpArgs
+              if ($LASTEXITCODE -ne 0) { throw "Tests failed for solution $target" }
             }
           } else {
-            $target = '${{ inputs.solution-path }}'
-            Write-Host "Running tests for $target"
-            dotnet test $target @commonArgs
-            if ($LASTEXITCODE -ne 0) { throw "Tests failed for $target" }
+            $commonArgs = @(
+              '--configuration', '${{ inputs.build-configuration }}',
+              '--logger', '${{ inputs.dotnet-test-logger }}',
+              '--blame-crash',
+              '--collect:XPlat Code Coverage',
+              '--',
+              'DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover',
+              '--no-build'
+            )
+            if ($projects.Count -gt 0) {
+              foreach ($project in $projects) {
+                Write-Host "Running tests for $project"
+                dotnet test $project @commonArgs
+                if ($LASTEXITCODE -ne 0) { throw "Tests failed for $project" }
+              }
+            } else {
+              $target = '${{ inputs.solution-path }}'
+              Write-Host "Running tests for $target"
+              dotnet test $target @commonArgs
+              if ($LASTEXITCODE -ne 0) { throw "Tests failed for $target" }
+            }
           }
 
       - name: Upload Coverage
