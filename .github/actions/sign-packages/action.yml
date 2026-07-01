@@ -80,18 +80,31 @@ runs:
         tenant-id: ${{ inputs.tenant-id }}
         allow-no-subscriptions: true
 
+    # NuGet packages (.nupkg) are zip-based and cannot be signed by signtool.exe
+    # (azure/artifact-signing-action), which only handles Authenticode/PE formats.
+    # The dotnet 'sign' CLI signs .nupkg via Azure Artifact Signing / Trusted Signing.
     - name: Sign with Azure Artifact Signing
       if: ${{ inputs.endpoint != '' }}
-      uses: azure/artifact-signing-action@v2
-      with:
-        endpoint: ${{ inputs.endpoint }}
-        signing-account-name: ${{ inputs.signing-account-name }}
-        certificate-profile-name: ${{ inputs.certificate-profile-name }}
-        files-folder: ${{ inputs.artifacts-path }}
-        files-folder-filter: nupkg,snupkg
-        files-folder-recurse: true
-        file-digest: SHA256
-        timestamp-rfc3161: ${{ inputs.timestamp-url != '' && inputs.timestamp-url || 'http://timestamp.acs.microsoft.com' }}
-        azure-tenant-id: ${{ inputs.tenant-id }}
-        azure-client-id: ${{ inputs.client-id }}
-        azure-client-secret: ${{ inputs.client-secret }}
+      shell: pwsh
+      run: |
+        dotnet tool install --global sign --prerelease
+        $timestampUrl = "${{ inputs.timestamp-url }}"
+        if ([string]::IsNullOrWhiteSpace($timestampUrl)) {
+          Write-Host 'Using Default Microsoft Timestamp Server'
+          $timestampUrl = 'http://timestamp.acs.microsoft.com'
+        }
+        # OIDC (azure/login above) -> azure-cli credential; client secret -> environment credential.
+        $credentialType = if ([string]::IsNullOrWhiteSpace("${{ inputs.client-secret }}")) { 'azure-cli' } else { 'environment' }
+        sign code trusted-signing `
+          "**/*.nupkg" `
+          --base-directory "${{ inputs.artifacts-path }}" `
+          --trusted-signing-endpoint "${{ inputs.endpoint }}" `
+          --trusted-signing-account "${{ inputs.signing-account-name }}" `
+          --trusted-signing-certificate-profile "${{ inputs.certificate-profile-name }}" `
+          --timestamp-url $timestampUrl `
+          --file-digest SHA256 `
+          --azure-credential-type $credentialType
+      env:
+        AZURE_TENANT_ID: ${{ inputs.tenant-id }}
+        AZURE_CLIENT_ID: ${{ inputs.client-id }}
+        AZURE_CLIENT_SECRET: ${{ inputs.client-secret }}
