@@ -93,14 +93,16 @@ runs:
           Write-Host 'Using Default Microsoft Timestamp Server'
           $timestampUrl = 'http://timestamp.acs.microsoft.com'
         }
+        # --base-directory must be a fully rooted (absolute) path.
+        $baseDir = (Resolve-Path -LiteralPath "${{ inputs.artifacts-path }}").Path
         # OIDC (azure/login above) -> azure-cli credential; client secret -> environment credential.
         $credentialType = if ([string]::IsNullOrWhiteSpace("${{ inputs.client-secret }}")) { 'azure-cli' } else { 'environment' }
-        sign code trusted-signing `
+        sign code artifact-signing `
           "**/*.nupkg" `
-          --base-directory "${{ inputs.artifacts-path }}" `
-          --trusted-signing-endpoint "${{ inputs.endpoint }}" `
-          --trusted-signing-account "${{ inputs.signing-account-name }}" `
-          --trusted-signing-certificate-profile "${{ inputs.certificate-profile-name }}" `
+          --base-directory $baseDir `
+          --artifact-signing-endpoint "${{ inputs.endpoint }}" `
+          --artifact-signing-account "${{ inputs.signing-account-name }}" `
+          --artifact-signing-certificate-profile "${{ inputs.certificate-profile-name }}" `
           --timestamp-url $timestampUrl `
           --file-digest SHA256 `
           --azure-credential-type $credentialType
