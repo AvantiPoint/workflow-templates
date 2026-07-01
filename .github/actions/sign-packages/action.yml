@@ -1,0 +1,97 @@
+name: Sign Packages
+description: Sign NuGet packages via Azure Key Vault (NuGetKeyVaultSignTool) or Azure Artifact Signing.
+
+inputs:
+  artifacts-path:
+    description: The folder containing the packages to sign.
+    required: false
+    default: ./Artifacts/
+  timestamp-url:
+    description: The RFC3161 timestamp server to use. Defaults to the Microsoft (Azure) timestamp server.
+    required: false
+    default: ''
+  # --- Azure Key Vault (used when 'endpoint' is not provided) ---
+  key-vault:
+    description: The name (URL) of the Azure Key Vault to use for signing.
+    required: false
+    default: ''
+  certificate:
+    description: The name of the certificate in the Key Vault to use for signing.
+    required: false
+    default: ''
+  # --- Azure Artifact Signing (providing 'endpoint' selects this path) ---
+  endpoint:
+    description: The Azure Artifact Signing account endpoint URI for your region.
+    required: false
+    default: ''
+  signing-account-name:
+    description: The Azure Artifact Signing account name.
+    required: false
+    default: ''
+  certificate-profile-name:
+    description: The Azure Artifact Signing certificate profile name.
+    required: false
+    default: ''
+  # --- Shared authentication ---
+  client-id:
+    description: The Azure AD application (client) id.
+    required: false
+    default: ''
+  tenant-id:
+    description: The Azure AD tenant (directory) id.
+    required: false
+    default: ''
+  client-secret:
+    description: The Azure AD application client secret. When omitted on the Artifact Signing path, OIDC is used.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Sign with Azure Key Vault
+      if: ${{ inputs.endpoint == '' }}
+      shell: pwsh
+      working-directory: ${{ inputs.artifacts-path }}
+      run: |
+        dotnet tool install --global NuGetKeyVaultSignTool
+        $timestampUrl = "${{ inputs.timestamp-url }}"
+        if ($timestampUrl -eq '') {
+          Write-Host 'Using Default Microsoft Timestamp Server'
+          $timestampUrl = 'http://timestamp.acs.microsoft.com'
+        }
+        Get-ChildItem -Recurse | Where-Object { $_.Name.EndsWith('.nupkg') -or $_.Name.EndsWith('.snupkg') } | ForEach-Object {
+          NuGetKeyVaultSignTool sign $_.Name `
+            --file-digest sha256 `
+            --timestamp-rfc3161 $timestampUrl `
+            --timestamp-digest sha256 `
+            --azure-key-vault-url '${{ inputs.key-vault }}' `
+            --azure-key-vault-client-id '${{ inputs.client-id }}' `
+            --azure-key-vault-tenant-id '${{ inputs.tenant-id }}' `
+            --azure-key-vault-client-secret '${{ inputs.client-secret }}' `
+            --azure-key-vault-certificate '${{ inputs.certificate }}'
+        }
+
+    - name: Azure Login (OIDC)
+      if: ${{ inputs.endpoint != '' && inputs.client-secret == '' }}
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.client-id }}
+        tenant-id: ${{ inputs.tenant-id }}
+        allow-no-subscriptions: true
+
+    - name: Sign with Azure Artifact Signing
+      if: ${{ inputs.endpoint != '' }}
+      uses: azure/artifact-signing-action@v2
+      with:
+        endpoint: ${{ inputs.endpoint }}
+        signing-account-name: ${{ inputs.signing-account-name }}
+        certificate-profile-name: ${{ inputs.certificate-profile-name }}
+        files-folder: ${{ inputs.artifacts-path }}
+        files-folder-filter: nupkg,snupkg
+        files-folder-recurse: true
+        file-digest: SHA256
+        timestamp-rfc3161: ${{ inputs.timestamp-url != '' && inputs.timestamp-url || 'http://timestamp.acs.microsoft.com' }}
+        azure-tenant-id: ${{ inputs.tenant-id }}
+        azure-client-id: ${{ inputs.client-id }}
+        azure-client-secret: ${{ inputs.client-secret }}

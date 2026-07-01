@@ -14,6 +14,23 @@ on:
         description: Whether to code sign the build or not.
         default: false
         required: false
+      codeSignEndpoint:
+        type: string
+        description: >
+          The Azure Artifact Signing account endpoint URI for your region. When set, packages are
+          signed with Azure Artifact Signing instead of Azure Key Vault.
+        required: false
+        default: ''
+      codeSignAccountName:
+        type: string
+        description: The Azure Artifact Signing account name (used when codeSignEndpoint is set).
+        required: false
+        default: ''
+      codeSignCertificateProfile:
+        type: string
+        description: The Azure Artifact Signing certificate profile name (used when codeSignEndpoint is set).
+        required: false
+        default: ''
     secrets:
       feedUrl:
         required: false
@@ -55,28 +72,20 @@ jobs:
           name: ${{ inputs.artifact-name }}
           path: Artifacts/
 
-      - name: Sign NuGet Packages
+      - name: Sign Packages
         if: ${{ inputs.code-sign }}
-        shell: pwsh
-        working-directory: ${{ inputs.artifacts-path }}
-        run: |
-          dotnet tool install --global NuGetKeyVaultSignTool
-          $timestampUrl = "${{ secrets.codeSignTimestampUrl }}"
-          if ($timestampUrl -eq '') {
-            Write-Host 'Using Default DigiCert Timestamp Server'
-            $timestampUrl = 'http://timestamp.digicert.com'
-          }
-          Get-ChildItem -Recurse | Where-Object { $_.Name.EndsWith('.nupkg') -or $_.Name.EndsWith('.snupkg') } | ForEach-Object {
-            NuGetKeyVaultSignTool sign $_.Name `
-              --file-digest sha256 `
-              --timestamp-rfc3161 $timestampUrl `
-              --timestamp-digest sha256 `
-              --azure-key-vault-url '${{ secrets.codeSignKeyVault }}' `
-              --azure-key-vault-client-id '${{ secrets.codeSignClientId }}' `
-              --azure-key-vault-tenant-id '${{ secrets.codeSignTenantId }}' `
-              --azure-key-vault-client-secret '${{ secrets.codeSignClientSecret }}' `
-              --azure-key-vault-certificate '${{ secrets.codeSignCertificate }}'
-          }
+        uses: avantipoint/workflow-templates/.github/actions/sign-packages@master
+        with:
+          artifacts-path: Artifacts/
+          timestamp-url: ${{ secrets.codeSignTimestampUrl }}
+          key-vault: ${{ secrets.codeSignKeyVault }}
+          certificate: ${{ secrets.codeSignCertificate }}
+          endpoint: ${{ inputs.codeSignEndpoint }}
+          signing-account-name: ${{ inputs.codeSignAccountName }}
+          certificate-profile-name: ${{ inputs.codeSignCertificateProfile }}
+          client-id: ${{ secrets.codeSignClientId }}
+          tenant-id: ${{ secrets.codeSignTenantId }}
+          client-secret: ${{ secrets.codeSignClientSecret }}
 
       - name: ${{ inputs.name }}
         uses: dansiegel/publish-nuget@master
