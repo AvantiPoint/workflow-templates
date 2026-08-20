@@ -1,0 +1,37 @@
+name: NuGet deployment dry run
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  fixture:
+    name: Create minimal NuGet artifact
+    runs-on: ubuntu-slim
+    timeout-minutes: 3
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Create credential-free package fixture
+        run: node scripts/create-dry-run-package.mjs Artifacts/AppPortal.WorkflowDryRun.0.0.0.nupkg
+
+      - name: Upload package fixture
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: NuGetDryRun
+          path: Artifacts/AppPortal.WorkflowDryRun.0.0.0.nupkg
+          if-no-files-found: error
+
+  exercise-dry-run:
+    name: Exercise same-commit reusable workflow
+    needs: fixture
+    uses: ./.github/workflows/deploy-nuget.yml
+    with:
+      name: Inspect NuGet deployment artifact
+      artifact-name: NuGetDryRun
+      dry-run: true
