@@ -17,6 +17,14 @@ function expectViolation(errors, pattern) {
   assert.ok(errors.some((error) => pattern.test(error)), `Expected ${pattern}, received:\n${errors.join('\n')}`);
 }
 
+function mutateDeployJob(mutate) {
+  const marker = '\n  deploy:\n';
+  const markerIndex = committed.deploymentWorkflow.indexOf(marker);
+  assert.ok(markerIndex >= 0, 'Expected the committed deploy job marker.');
+  const deployStart = markerIndex + marker.length;
+  return committed.deploymentWorkflow.slice(0, deployStart) + mutate(committed.deploymentWorkflow.slice(deployStart));
+}
+
 test('committed deployment workflow policy passes', () => {
   assert.deepEqual(errorsFor(), []);
 });
@@ -40,12 +48,52 @@ test('mutable deployment action references fail closed', () => {
   expectViolation(errorsFor({ deploymentWorkflow }), /full 40-character commit SHA/);
 });
 
+test('production download cannot be replaced by another fully pinned action', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+    'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803',
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
+});
+
+test('production download cannot use an unreviewed full SHA', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+    'actions/download-artifact@0000000000000000000000000000000000000000',
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
+});
+
+test('a reviewed action reference in a trailing comment cannot satisfy policy', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    'uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8',
+    'uses: actions/download-artifact@0000000000000000000000000000000000000000 # actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
+});
+
 test('mutable signing action references fail closed', () => {
   const signingAction = committed.signingAction.replace(
     'azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6',
     'azure/login@v2',
   );
   expectViolation(errorsFor({ signingAction }), /full 40-character commit SHA/);
+});
+
+test('signing action cannot use an unreviewed full SHA', () => {
+  const signingAction = committed.signingAction.replace(
+    'azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6',
+    'azure/login@0000000000000000000000000000000000000000',
+  );
+  expectViolation(errorsFor({ signingAction }), /not in the exact reviewed action allowlist/);
+});
+
+test('quoted uses keys cannot add an action to the reviewed signing composite', () => {
+  const signingAction = committed.signingAction.replace(
+    '  steps:\n',
+    '  steps:\n    - name: Quoted action key bypass\n      "uses": actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803\n',
+  );
+  expectViolation(errorsFor({ signingAction }), /must match the complete reviewed security-critical file/);
 });
 
 test('new mutable remote actions fail closed', () => {
@@ -69,7 +117,7 @@ test('removing a reviewed credential-bearing action fails closed', () => {
     /^\s*uses: dansiegel\/publish-nuget@[^\n]+$/m,
     '        run: Write-Host "publication action removed"',
   );
-  expectViolation(errorsFor({ deploymentWorkflow }), /must retain the reviewed dansiegel\/publish-nuget action/);
+  expectViolation(errorsFor({ deploymentWorkflow }), /must retain the exact reviewed uses sequence/);
 });
 
 test('missing deploy job timeout fails closed', () => {
@@ -117,6 +165,27 @@ test('dry-run job cannot read deployment secrets', () => {
     '    timeout-minutes: 3\n    env:\n      NUGET_API_KEY: ${{ secrets.apiKey }}\n    steps:',
   );
   expectViolation(errorsFor({ deploymentWorkflow }), /job dry-run must not read or declare secrets/);
+});
+
+test('dry-run job cannot use bracket access to deployment secrets', () => {
+  const deploymentWorkflow = committed.deploymentWorkflow.replace(
+    '    timeout-minutes: 3\n    steps:',
+    "    timeout-minutes: 3\n    env:\n      NUGET_API_KEY: ${{ secrets['apiKey'] }}\n    steps:",
+  );
+  expectViolation(errorsFor({ deploymentWorkflow }), /job dry-run must not read or declare secrets/);
+});
+
+test('workflow-level secret expressions cannot flow into the dry-run job', () => {
+  const deploymentWorkflow = committed.deploymentWorkflow.replace(
+    '\njobs:\n',
+    '\nenv:\n  NUGET_API_KEY: ${{ secrets["apiKey"] }}\n\njobs:\n',
+  );
+  expectViolation(errorsFor({ deploymentWorkflow }), /must not reference the secrets context outside the real deploy job/);
+});
+
+test('workflow-level secret expressions after jobs cannot flow into dry-run', () => {
+  const deploymentWorkflow = committed.deploymentWorkflow + '\nenv:\n  NUGET_API_KEY: ${{ secrets.apiKey }}\n';
+  expectViolation(errorsFor({ deploymentWorkflow }), /must not reference the secrets context outside the real deploy job/);
 });
 
 test('dry-run job cannot contain the publication action', () => {
@@ -172,6 +241,41 @@ test('real deploy fails closed without its API key gate', () => {
   expectViolation(errorsFor({ deploymentWorkflow }), /read apiKey only inside the real deployment guard/);
 });
 
+test('real deploy cannot replace the missing API key throw with a warning', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    "            throw 'apiKey is required unless dry-run is true.'",
+    "            Write-Host 'apiKey is missing but deployment will continue.'",
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /must match the reviewed fail-closed signing and publication implementation/);
+});
+
+test('real deploy API key guard cannot continue on error', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    '      - name: Require NuGet API key\n        shell: pwsh',
+    '      - name: Require NuGet API key\n        continue-on-error: true\n        shell: pwsh',
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /must match the reviewed fail-closed signing and publication implementation/);
+});
+
+test('real publication step cannot be structurally skipped', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    '      - name: ${{ inputs.name }}\n        uses: dansiegel/publish-nuget',
+    '      - name: ${{ inputs.name }}\n        if: ${{ false }}\n        uses: dansiegel/publish-nuget',
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /must match the reviewed fail-closed signing and publication implementation/);
+});
+
+test('a disabled reviewed production action cannot hide an executable replacement step', () => {
+  const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
+    '      - name: Download Artifacts\n        uses: actions/download-artifact',
+    "      - name: Reviewed download disabled\n        if: ${{ false }}\n        uses: actions/download-artifact",
+  ).replace(
+    '      - name: Sign Packages',
+    "      - name: Executable replacement path\n        shell: pwsh\n        run: Write-Host 'replacement executed'\n\n      - name: Sign Packages",
+  ));
+  expectViolation(errorsFor({ deploymentWorkflow }), /must match the reviewed fail-closed signing and publication implementation/);
+});
+
 test('real deploy preserves existing publication inputs', () => {
   const deploymentWorkflow = committed.deploymentWorkflow.replace(
     "            filename: 'Artifacts/*.nupkg'",
@@ -188,12 +292,67 @@ test('dry-run caller cannot inherit secrets', () => {
   expectViolation(errorsFor({ dryRunWorkflow }), /must not read, inherit, or pass secrets/);
 });
 
+test('a decoy pull_request key cannot replace the real PR trigger', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow
+    .replace('  pull_request:\n', '')
+    .replace('jobs:\n', 'env:\n  pull_request: disabled\n\njobs:\n');
+  expectViolation(errorsFor({ dryRunWorkflow }), /must match the complete reviewed security-critical file/);
+});
+
+test('dry-run fixture cannot use double-quoted bracket access to secrets', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    '    timeout-minutes: 3\n    steps:',
+    '    timeout-minutes: 3\n    env:\n      NUGET_API_KEY: ${{ secrets["apiKey"] }}\n    steps:',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /must not read, inherit, or pass secrets/);
+});
+
+test('dry-run caller cannot serialize the dynamic secrets context', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    '      dry-run: true',
+    '      dry-run: true\n      diagnostic: ${{ toJSON(secrets) }}',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /must not read, inherit, or pass secrets/);
+});
+
+test('dry-run workflow permissions cannot add OIDC or package writes', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    'permissions:\n  actions: read\n  contents: read',
+    'permissions:\n  actions: read\n  contents: read\n  id-token: write\n  packages: write',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /permissions must allow only actions: read and contents: read/);
+});
+
+test('dry-run jobs cannot override workflow permissions', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    '    timeout-minutes: 3\n    steps:',
+    '    timeout-minutes: 3\n    permissions:\n      packages: write\n    steps:',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /exactly one workflow-level permissions block and no job-level overrides/);
+});
+
+test('dry-run fixture job cannot be skipped', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    '  fixture:\n    name: Create minimal NuGet artifact',
+    '  fixture:\n    if: ${{ false }}\n    name: Create minimal NuGet artifact',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /job fixture must match the reviewed artifact-creation implementation/);
+});
+
+test('same-commit dry-run invocation cannot be skipped', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    '    needs: fixture\n    uses: ./.github/workflows/deploy-nuget.yml',
+    '    needs: fixture\n    if: ${{ false }}\n    uses: ./.github/workflows/deploy-nuget.yml',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /job exercise-dry-run must match the reviewed same-commit invocation/);
+});
+
 test('dry-run caller must use same-commit local workflow syntax', () => {
   const dryRunWorkflow = committed.dryRunWorkflow.replace(
     'uses: ./.github/workflows/deploy-nuget.yml',
     'uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@e808be290d267420d1a64ee2e2bcbd5e52b988d9',
   );
-  expectViolation(errorsFor({ dryRunWorkflow }), /must retain same-commit local call/);
+  expectViolation(errorsFor({ dryRunWorkflow }), /exact reviewed action allowlist|exact reviewed uses sequence/);
 });
 
 test('dry-run caller cannot disable dry-run mode', () => {
@@ -207,4 +366,20 @@ test('dry-run caller action pins fail closed', () => {
     'actions/upload-artifact@v7',
   );
   expectViolation(errorsFor({ dryRunWorkflow }), /full 40-character commit SHA/);
+});
+
+test('dry-run caller actions cannot use an unreviewed full SHA', () => {
+  const dryRunWorkflow = committed.dryRunWorkflow.replace(
+    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+    'actions/upload-artifact@0000000000000000000000000000000000000000',
+  );
+  expectViolation(errorsFor({ dryRunWorkflow }), /not in the exact reviewed action allowlist/);
+});
+
+test('policy validation job cannot be skipped', () => {
+  const policyWorkflow = committed.policyWorkflow.replace(
+    '  validate:\n    name: Validate deployment workflow policy',
+    '  validate:\n    if: ${{ false }}\n    name: Validate deployment workflow policy',
+  );
+  expectViolation(errorsFor({ policyWorkflow }), /must match the complete reviewed security-critical file/);
 });

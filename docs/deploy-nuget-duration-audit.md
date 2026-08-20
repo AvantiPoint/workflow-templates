@@ -27,7 +27,9 @@ The reusable workflow has mutually exclusive jobs:
 - `dry-run` runs only when the opt-in boolean input is true. It has a three-minute cap, downloads the selected artifact, validates ZIP central-directory and `.nuspec` structure, and records size and SHA-256. It contains no secret references and no sign or publish action.
 - `deploy` runs only when dry-run is false. Its hosted Windows runner, 10-minute cap, signing condition, package glob, feed input, and publication action remain unchanged. GitHub does not support conditionally required `workflow_call` secrets, so `apiKey` is optional during call validation and an early production-only guard rejects an absent key before artifact download, signing, or publication.
 
-The PR caller passes no secrets. A fail-closed policy suite rejects secret inheritance, mutable action refs, any change to the reviewed dry-run job (including added command-line sign/publish paths), an unguarded real deploy, missing production credentials, or expanded timeouts.
+The PR caller passes no secrets and grants only `actions: read` plus `contents: read`; the policy rejects any extra workflow permission or job-level override. Secret-context detection covers dot access, bracket access, context serialization, and secret inheritance across the fixture, caller, and reusable dry-run job.
+
+The fail-closed policy binds every parsed `uses` occurrence to its exact reviewed path and SHA, in its expected file and job sequence. The complete reusable deploy workflow, dry-run caller, policy workflow, and signing composite are authoritative hash-locked surfaces; job-level hashes retain focused diagnostics. The suite rejects alternate YAML action syntax, decoy triggers, skipped validation/proof jobs, hidden or disabled publication, a non-blocking API-key guard, added command-line sign/publish paths, runner drift, or expanded timeouts.
 
 ## Immutable action revisions
 
@@ -36,3 +38,5 @@ The PR caller passes no secrets. A fail-closed policy suite rejects secret inher
 - `azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6` (`v2.3.1`) inside the signing composite action.
 - `dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f` (`v1.2`).
 - The repository-owned signing action at `0836b48f03b9309fe1bcadda6109d9e761e5aaef`. That commit changes only the Azure Login reference above, allowing the reusable workflow to pin reviewed signing content without a circular self-reference.
+
+The signing-action pin targets an intermediate commit from this branch. PR #8 must therefore use a normal merge commit so `0836b48f03b9309fe1bcadda6109d9e761e5aaef` remains an ancestor of `master`; do not squash or rebase-merge unless the pin is first moved to an already-merged durable commit.
