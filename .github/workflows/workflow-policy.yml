@@ -1,0 +1,26 @@
+name: Workflow policy
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate deployment workflow policy
+    runs-on: ubuntu-slim
+    timeout-minutes: 3
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Exercise fail-closed policy tests
+        run: node --test scripts/validate-deploy-workflow-policy.test.mjs
+
+      - name: Validate committed deployment workflows
+        run: node scripts/validate-deploy-workflow-policy.mjs

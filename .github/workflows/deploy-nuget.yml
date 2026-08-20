@@ -14,6 +14,11 @@ on:
         description: Whether to code sign the build or not.
         default: false
         required: false
+      dry-run:
+        type: boolean
+        description: Inspect the downloaded NuGet artifact without signing, publishing, or reading deployment secrets.
+        default: false
+        required: false
       codeSignEndpoint:
         type: string
         description: >
@@ -35,7 +40,8 @@ on:
       feedUrl:
         required: false
       apiKey:
-        required: true
+        description: Required for real deployments; omitted by dry-run callers.
+        required: false
       codeSignTimestampUrl:
         description: The url to the timestamp server.
         required: false
@@ -56,9 +62,91 @@ on:
         required: false
 
 jobs:
+  dry-run:
+    name: ${{ inputs.name }}
+    if: ${{ inputs.dry-run }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 3
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: Artifacts/
+
+      - name: Inspect NuGet packages without credentials
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { createHash } = require('node:crypto');
+          const { readdirSync, readFileSync } = require('node:fs');
+          const { join, relative } = require('node:path');
+
+          function filesUnder(directory) {
+            return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+              const path = join(directory, entry.name);
+              return entry.isDirectory() ? filesUnder(path) : [path];
+            });
+          }
+
+          const packages = filesUnder('Artifacts').filter((path) => path.endsWith('.nupkg'));
+          if (packages.length === 0) {
+            throw new Error('The downloaded artifact does not contain a NuGet package.');
+          }
+
+          function centralDirectoryEntries(bytes) {
+            const endSignature = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+            const endOffset = bytes.lastIndexOf(endSignature);
+            if (endOffset < 0 || endOffset + 22 > bytes.length) {
+              throw new Error('Missing ZIP end-of-central-directory record.');
+            }
+
+            const entryCount = bytes.readUInt16LE(endOffset + 10);
+            const directorySize = bytes.readUInt32LE(endOffset + 12);
+            const directoryOffset = bytes.readUInt32LE(endOffset + 16);
+            const commentLength = bytes.readUInt16LE(endOffset + 20);
+            if (entryCount === 0 || directoryOffset + directorySize !== endOffset || endOffset + 22 + commentLength !== bytes.length) {
+              throw new Error('Invalid ZIP central-directory bounds.');
+            }
+
+            const names = [];
+            let offset = directoryOffset;
+            for (let index = 0; index < entryCount; index += 1) {
+              if (offset + 46 > endOffset || bytes.readUInt32LE(offset) !== 0x02014b50) {
+                throw new Error('Invalid ZIP central-directory entry.');
+              }
+              const nameLength = bytes.readUInt16LE(offset + 28);
+              const extraLength = bytes.readUInt16LE(offset + 30);
+              const entryCommentLength = bytes.readUInt16LE(offset + 32);
+              names.push(bytes.subarray(offset + 46, offset + 46 + nameLength).toString('utf8'));
+              offset += 46 + nameLength + extraLength + entryCommentLength;
+            }
+            if (offset !== endOffset) {
+              throw new Error('ZIP central-directory size does not match its entries.');
+            }
+            return names;
+          }
+
+          for (const path of packages) {
+            const bytes = readFileSync(path);
+            if (bytes.length === 0 || bytes.readUInt32LE(0) !== 0x04034b50) {
+              throw new Error(`${path} is not a non-empty ZIP-based NuGet package.`);
+            }
+            const entries = centralDirectoryEntries(bytes);
+            if (!entries.some((entry) => entry.endsWith('.nuspec'))) {
+              throw new Error(`${path} does not contain the required NuGet package structure.`);
+            }
+
+            const digest = createHash('sha256').update(bytes).digest('hex');
+            console.log(`${relative(process.cwd(), path)}: ${bytes.length} bytes, sha256:${digest}`);
+          }
+          NODE
+
   deploy:
     name: ${{ inputs.name }}
+    if: ${{ ! inputs.dry-run }}
     runs-on: windows-latest
+    timeout-minutes: 10
     env:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -66,15 +154,24 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
 
     steps:
+      - name: Require NuGet API key
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.apiKey }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
+            throw 'apiKey is required unless dry-run is true.'
+          }
+
       - name: Download Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: ${{ inputs.artifact-name }}
           path: Artifacts/
 
       - name: Sign Packages
         if: ${{ inputs.code-sign }}
-        uses: avantipoint/workflow-templates/.github/actions/sign-packages@master
+        uses: avantipoint/workflow-templates/.github/actions/sign-packages@0836b48f03b9309fe1bcadda6109d9e761e5aaef
         with:
           artifacts-path: Artifacts/
           timestamp-url: ${{ secrets.codeSignTimestampUrl }}
@@ -88,7 +185,7 @@ jobs:
           client-secret: ${{ secrets.codeSignClientSecret }}
 
       - name: ${{ inputs.name }}
-        uses: dansiegel/publish-nuget@master
+        uses: dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f # v1.2
         with:
             filename: 'Artifacts/*.nupkg'
             feedUrl: ${{ secrets.feedUrl }}
