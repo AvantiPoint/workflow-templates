@@ -52,6 +52,25 @@ jobs:
 > **NOTE** 
 > If you are running tests, be sure to add the permissions so that the Test Results can be viewed. Failure to add the permissions will result in a failure running the workflow.
 
+## Restoring from a Private NuGet Feed
+
+Both `dotnet-build.yml` and `msbuild-build.yml` accept the feed URL and credentials as secrets:
+
+```yaml
+jobs:
+  build:
+    uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@v2
+    with:
+      name: My Project
+      solution-path: MyProject.sln
+    secrets:
+      nugetFeedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
+      nugetUserName: ${{ secrets.IN_HOUSE_USER }}
+      nugetToken: ${{ secrets.IN_HOUSE_API_KEY }}
+```
+
+The `nugetFeedUrl` secret takes precedence over the existing `nugetFeedUrl` input. Existing callers using the input continue to work. With neither supplied, no custom feed is added.
+
 ## NuGet Package Signing
 
 Several of the templates include an optional NuGet package signing step. This step uses the NuGetKeyVaultSignTool. It only supports authentication with an Azure Key Vault using a Client Id & Client Secret.
