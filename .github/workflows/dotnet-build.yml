@@ -220,8 +220,8 @@ jobs:
           NUGET_USER_NAME: ${{ secrets.nugetUserName }}
           NUGET_TOKEN: ${{ secrets.nugetToken }}
         run: |
-          $userName = $env:NUGET_USER_NAME
-          $token = $env:NUGET_TOKEN
+          [string]$userName = $env:NUGET_USER_NAME
+          [string]$token = $env:NUGET_TOKEN
           if ($userName -eq '' || $token -eq '') {
             dotnet nuget add source "$env:NUGET_FEED_URL" -n NuGetFeed
           } else {
