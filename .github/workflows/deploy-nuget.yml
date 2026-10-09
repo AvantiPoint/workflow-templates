@@ -63,7 +63,7 @@ on:
 
 jobs:
   dry-run:
-    name: ${{ inputs.name }}
+    name: Inspect NuGet packages (dry run)
     if: ${{ inputs.dry-run }}
     runs-on: ubuntu-slim
     timeout-minutes: 3
@@ -143,7 +143,7 @@ jobs:
           NODE
 
   deploy:
-    name: ${{ inputs.name }}
+    name: Publish NuGet packages
     if: ${{ ! inputs.dry-run }}
     runs-on: windows-latest
     timeout-minutes: 10

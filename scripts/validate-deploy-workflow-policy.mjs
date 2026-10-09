@@ -10,12 +10,12 @@ const policyWorkflowPath = '.github/workflows/workflow-policy.yml';
 const signingActionPath = '.github/actions/sign-packages/action.yml';
 const maximumDeployTimeoutMinutes = 10;
 const maximumDryRunTimeoutMinutes = 3;
-const reviewedDryRunJobSha256 = 'e9977e4e330c2a3e280e98d66c2b212105798b1b98d77b79081ffcc195e6e628';
-const reviewedDeployJobSha256 = '4a9e706f71acfaa131798c23395656de4137a46597d30560a1dfd7d56051ca59';
+const reviewedDryRunJobSha256 = '7e88b2f209cdcd461f0680bb3702edf5d9c734d387a1aa336e465ce3cef07739';
+const reviewedDeployJobSha256 = '8aee5e662651e1b804a210c889982f995ca3584b9bde24dfcfa8e4a475504dbb';
 const reviewedFixtureJobSha256 = '8e1a549f73847efc6bff2e6997c91967b287c596f1debbe3f41738529e1d2fbb';
 const reviewedExerciseJobSha256 = 'f8d528f5576eda5b2e04c62037e0f023e3574a62b686c63b2eb13195d296dbe8';
 const reviewedSigningActionSha256 = '86451928f917720826bc12d012fe39a6ed82bf25a4aacb563c840240f7e8f4c5';
-const reviewedDeploymentWorkflowSha256 = '112f554dbc4ccd519182855a331746cd50355ca613ae24c82a7f2a28f5c8cb52';
+const reviewedDeploymentWorkflowSha256 = 'a2249fe2419e50e9d9ed71d2451d78f1903e888163d3494e38c8f3efcd24762a';
 const reviewedDryRunWorkflowSha256 = '490415e958e225b4c6d4f656219940bb9d1a9833ea9a6ded080e73cce2e9811c';
 const reviewedPolicyWorkflowSha256 = 'e17d37371d0aace27fa491ff78d56a955fce8a420b0e6473f2f444d7486de6da';
 
