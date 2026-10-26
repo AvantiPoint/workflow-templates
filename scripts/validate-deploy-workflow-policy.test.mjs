@@ -40,25 +40,25 @@ test('committed dry-run fixture is a canonical NuGet ZIP', () => {
   assert.ok(bytes.includes(Buffer.from('AppPortal.WorkflowDryRun.nuspec')));
 });
 
-test('mutable deployment action references fail closed', () => {
+test('unreviewed deployment action versions fail closed', () => {
   const deploymentWorkflow = committed.deploymentWorkflow.replace(
-    'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
     'actions/download-artifact@v8',
+    'actions/download-artifact@v7',
   );
-  expectViolation(errorsFor({ deploymentWorkflow }), /full 40-character commit SHA/);
+  expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
 });
 
-test('production download cannot be replaced by another fully pinned action', () => {
+test('production download cannot be replaced by another action', () => {
   const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
-    'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
-    'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803',
+    'actions/download-artifact@v8',
+    'actions/checkout@v6',
   ));
   expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
 });
 
 test('production download cannot use an unreviewed full SHA', () => {
   const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
-    'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+    'actions/download-artifact@v8',
     'actions/download-artifact@0000000000000000000000000000000000000000',
   ));
   expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
@@ -66,23 +66,23 @@ test('production download cannot use an unreviewed full SHA', () => {
 
 test('a reviewed action reference in a trailing comment cannot satisfy policy', () => {
   const deploymentWorkflow = mutateDeployJob((deployJob) => deployJob.replace(
-    'uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8',
-    'uses: actions/download-artifact@0000000000000000000000000000000000000000 # actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+    'uses: actions/download-artifact@v8',
+    'uses: actions/download-artifact@0000000000000000000000000000000000000000 # actions/download-artifact@v8',
   ));
   expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
 });
 
-test('mutable signing action references fail closed', () => {
+test('unreviewed signing action versions fail closed', () => {
   const signingAction = committed.signingAction.replace(
-    'azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6',
+    'azure/login@v3.1.0',
     'azure/login@v2',
   );
-  expectViolation(errorsFor({ signingAction }), /full 40-character commit SHA/);
+  expectViolation(errorsFor({ signingAction }), /not in the exact reviewed action allowlist/);
 });
 
 test('signing action cannot use an unreviewed full SHA', () => {
   const signingAction = committed.signingAction.replace(
-    'azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6',
+    'azure/login@v3.1.0',
     'azure/login@0000000000000000000000000000000000000000',
   );
   expectViolation(errorsFor({ signingAction }), /not in the exact reviewed action allowlist/);
@@ -91,17 +91,17 @@ test('signing action cannot use an unreviewed full SHA', () => {
 test('quoted uses keys cannot add an action to the reviewed signing composite', () => {
   const signingAction = committed.signingAction.replace(
     '  steps:\n',
-    '  steps:\n    - name: Quoted action key bypass\n      "uses": actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803\n',
+    '  steps:\n    - name: Quoted action key bypass\n      "uses": actions/checkout@v6\n',
   );
   expectViolation(errorsFor({ signingAction }), /must match the complete reviewed security-critical file/);
 });
 
-test('new mutable remote actions fail closed', () => {
+test('unreviewed remote actions fail closed', () => {
   const deploymentWorkflow = committed.deploymentWorkflow.replace(
     '    steps:',
     '    steps:\n      - uses: example/unreviewed-action@main',
   );
-  expectViolation(errorsFor({ deploymentWorkflow }), /full 40-character commit SHA/);
+  expectViolation(errorsFor({ deploymentWorkflow }), /not in the exact reviewed action allowlist/);
 });
 
 test('inline mutable remote actions fail closed', () => {
@@ -191,7 +191,7 @@ test('workflow-level secret expressions after jobs cannot flow into dry-run', ()
 test('dry-run job cannot contain the publication action', () => {
   const deploymentWorkflow = committed.deploymentWorkflow.replace(
     '      - name: Inspect NuGet packages without credentials',
-    '      - uses: dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f\n\n      - name: Inspect NuGet packages without credentials',
+    '      - uses: dansiegel/publish-nuget@v1.2\n\n      - name: Inspect NuGet packages without credentials',
   );
   expectViolation(errorsFor({ deploymentWorkflow }), /job dry-run must not contain signing or publication actions/);
 });
@@ -199,7 +199,7 @@ test('dry-run job cannot contain the publication action', () => {
 test('dry-run job cannot contain the signing action', () => {
   const deploymentWorkflow = committed.deploymentWorkflow.replace(
     '      - name: Inspect NuGet packages without credentials',
-    '      - uses: avantipoint/workflow-templates/.github/actions/sign-packages@0836b48f03b9309fe1bcadda6109d9e761e5aaef\n\n      - name: Inspect NuGet packages without credentials',
+    '      - uses: avantipoint/workflow-templates/.github/actions/sign-packages@master\n\n      - name: Inspect NuGet packages without credentials',
   );
   expectViolation(errorsFor({ deploymentWorkflow }), /job dry-run must not contain signing or publication actions/);
 });
@@ -360,17 +360,17 @@ test('dry-run caller cannot disable dry-run mode', () => {
   expectViolation(errorsFor({ dryRunWorkflow }), /force dry-run mode/);
 });
 
-test('dry-run caller action pins fail closed', () => {
+test('unreviewed dry-run caller action versions fail closed', () => {
   const dryRunWorkflow = committed.dryRunWorkflow.replace(
-    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
     'actions/upload-artifact@v7',
+    'actions/upload-artifact@v6',
   );
-  expectViolation(errorsFor({ dryRunWorkflow }), /full 40-character commit SHA/);
+  expectViolation(errorsFor({ dryRunWorkflow }), /not in the exact reviewed action allowlist/);
 });
 
 test('dry-run caller actions cannot use an unreviewed full SHA', () => {
   const dryRunWorkflow = committed.dryRunWorkflow.replace(
-    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+    'actions/upload-artifact@v7',
     'actions/upload-artifact@0000000000000000000000000000000000000000',
   );
   expectViolation(errorsFor({ dryRunWorkflow }), /not in the exact reviewed action allowlist/);

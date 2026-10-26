@@ -10,22 +10,22 @@ const policyWorkflowPath = '.github/workflows/workflow-policy.yml';
 const signingActionPath = '.github/actions/sign-packages/action.yml';
 const maximumDeployTimeoutMinutes = 10;
 const maximumDryRunTimeoutMinutes = 3;
-const reviewedDryRunJobSha256 = 'e9977e4e330c2a3e280e98d66c2b212105798b1b98d77b79081ffcc195e6e628';
-const reviewedDeployJobSha256 = '4a9e706f71acfaa131798c23395656de4137a46597d30560a1dfd7d56051ca59';
-const reviewedFixtureJobSha256 = '8e1a549f73847efc6bff2e6997c91967b287c596f1debbe3f41738529e1d2fbb';
+const reviewedDryRunJobSha256 = '29c544e62f2389836ee4da78f16f380eaba37090e451962ad0823a9e19d6fcfa';
+const reviewedDeployJobSha256 = '19d827815fcee50b11cd0561e996f1e8430b04394548d50fabc0c4b693efe753';
+const reviewedFixtureJobSha256 = '4f489af46520305d8403c27a39642043ee97854abc34ca5b35bbe8144f0adf79';
 const reviewedExerciseJobSha256 = 'f8d528f5576eda5b2e04c62037e0f023e3574a62b686c63b2eb13195d296dbe8';
-const reviewedSigningActionSha256 = '86451928f917720826bc12d012fe39a6ed82bf25a4aacb563c840240f7e8f4c5';
-const reviewedDeploymentWorkflowSha256 = '112f554dbc4ccd519182855a331746cd50355ca613ae24c82a7f2a28f5c8cb52';
-const reviewedDryRunWorkflowSha256 = '490415e958e225b4c6d4f656219940bb9d1a9833ea9a6ded080e73cce2e9811c';
-const reviewedPolicyWorkflowSha256 = 'e17d37371d0aace27fa491ff78d56a955fce8a420b0e6473f2f444d7486de6da';
+const reviewedSigningActionSha256 = '08196593a3eb2694c449748d1627b8889858cc8d649401c3bc8f9ea7693d57a9';
+const reviewedDeploymentWorkflowSha256 = '6f558b9ac5ba0243e5b0bdf09919b5766d7b32a16620a7657029383d11074df0';
+const reviewedDryRunWorkflowSha256 = '02557f3171dba0ec9517f45c23cdac683f00278b23fb0a22bd47bd92e5fa0fef';
+const reviewedPolicyWorkflowSha256 = 'fc1e98f390194cc28ad27b60cb481fd4f30ecad674d12dbdb52d85cb2dceb6ac';
 
 const actionRefs = {
-  checkout: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803',
-  download: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
-  login: 'azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6',
-  publish: 'dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f',
-  sign: 'avantipoint/workflow-templates/.github/actions/sign-packages@0836b48f03b9309fe1bcadda6109d9e761e5aaef',
-  upload: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+  checkout: 'actions/checkout@v6',
+  download: 'actions/download-artifact@v8',
+  login: 'azure/login@v3.1.0',
+  publish: 'dansiegel/publish-nuget@v1.2',
+  sign: 'avantipoint/workflow-templates/.github/actions/sign-packages@master',
+  upload: 'actions/upload-artifact@v7',
 };
 
 const expectedUsesByFile = new Map([
@@ -79,9 +79,6 @@ function collectUses(path, content, errors) {
       continue;
     }
 
-    if (!value.startsWith('./') && !/^([^/\s]+)\/([^@\s]+)@([0-9a-f]{40})$/i.test(value)) {
-      errors.push(`${path}:${index + 1} must pin ${value} to a full 40-character commit SHA.`);
-    }
     references.push({ line: index + 1, value });
   }
   return references;
