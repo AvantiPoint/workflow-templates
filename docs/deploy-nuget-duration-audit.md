@@ -29,14 +29,15 @@ The reusable workflow has mutually exclusive jobs:
 
 The PR caller passes no secrets and grants only `actions: read` plus `contents: read`; the policy rejects any extra workflow permission or job-level override. Secret-context detection covers dot access, bracket access, context serialization, and secret inheritance across the fixture, caller, and reusable dry-run job.
 
-The fail-closed policy binds every parsed `uses` occurrence to its exact reviewed path and SHA, in its expected file and job sequence. The complete reusable deploy workflow, dry-run caller, policy workflow, and signing composite are authoritative hash-locked surfaces; job-level hashes retain focused diagnostics. The suite rejects alternate YAML action syntax, decoy triggers, skipped validation/proof jobs, hidden or disabled publication, a non-blocking API-key guard, added command-line sign/publish paths, runner drift, or expanded timeouts.
+The fail-closed policy binds every parsed `uses` occurrence to its exact reviewed path and readable version/master reference, in its expected file and job sequence. The complete reusable deploy workflow, dry-run caller, policy workflow, and signing composite are authoritative hash-locked surfaces; job-level hashes retain focused diagnostics. The suite rejects alternate YAML action syntax, decoy triggers, skipped validation/proof jobs, hidden or disabled publication, a non-blocking API-key guard, added command-line sign/publish paths, runner drift, or expanded timeouts.
 
-## Immutable action revisions
+## Action references
 
-- `actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c` (`v8`).
-- `actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803` (`v6`) and `actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` (`v7`) in the dry-run fixture job.
-- `azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6` (`v2.3.1`) inside the signing composite action.
-- `dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f` (`v1.2`).
-- The repository-owned signing action at `0836b48f03b9309fe1bcadda6109d9e761e5aaef`. That commit changes only the Azure Login reference above, allowing the reusable workflow to pin reviewed signing content without a circular self-reference.
+- `actions/download-artifact@v8`.
+- `actions/checkout@v6` and `actions/upload-artifact@v7` in the dry-run fixture job.
+- `azure/login@v3.1.0` (Node 24) inside the signing composite action.
+- `dansiegel/publish-nuget@v1.2`.
+- The repository-owned signing action at `master`.
 
-The signing-action pin targets an intermediate commit from this branch. PR #8 must therefore use a normal merge commit so `0836b48f03b9309fe1bcadda6109d9e761e5aaef` remains an ancestor of `master`; do not squash or rebase-merge unless the pin is first moved to an already-merged durable commit.
+Action references use readable version tags or `master` following the current repository-owner
+instruction. Existing credential isolation and dry-run behavior are unchanged.

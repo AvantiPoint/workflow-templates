@@ -69,7 +69,7 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.artifact-name }}
           path: Artifacts/
@@ -164,14 +164,14 @@ jobs:
           }
 
       - name: Download Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.artifact-name }}
           path: Artifacts/
 
       - name: Sign Packages
         if: ${{ inputs.code-sign }}
-        uses: avantipoint/workflow-templates/.github/actions/sign-packages@0836b48f03b9309fe1bcadda6109d9e761e5aaef
+        uses: avantipoint/workflow-templates/.github/actions/sign-packages@master
         with:
           artifacts-path: Artifacts/
           timestamp-url: ${{ secrets.codeSignTimestampUrl }}
@@ -185,7 +185,7 @@ jobs:
           client-secret: ${{ secrets.codeSignClientSecret }}
 
       - name: ${{ inputs.name }}
-        uses: dansiegel/publish-nuget@3a5a0d5ddd96d6c36d73586e9e0f3b829c14319f # v1.2
+        uses: dansiegel/publish-nuget@v1.2
         with:
             filename: 'Artifacts/*.nupkg'
             feedUrl: ${{ secrets.feedUrl }}
